@@ -10,6 +10,15 @@ body{font-family:Arial;padding:20px}
 .hidden{display:none}
 label{font-weight:bold}
 hr{margin:15px 0}
+  
+.preview-img {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  margin-top: 10px;
+  border: 1px solid #ddd;
+  display: none; /* Shuruat mein hidden rahega */
+}
 </style>
 </head>
 
@@ -63,20 +72,20 @@ hr{margin:15px 0}
 
 <script>
 function questionBlock(qid){
-  // Check karein ki kya ye Q1 ya Q2 hai
   let isSimple = (qid === "q1" || qid === "q2");
 
   document.write(`
     <p id="${qid}Text"></p>
-    <input type="radio" name="${qid}" onclick="toggle('${qid}',true)"> Yes
-    <input type="radio" name="${qid}" onclick="toggle('${qid}',false)"> No
+    <input type="radio" name="${qid}" onclick="toggle('${qid}',true)" required> Yes
+    <input type="radio" name="${qid}" onclick="toggle('${qid}',false)" required> No
     <div id="${qid}" class="hidden">
       ${isSimple ? '' : `
-        Version No <input type="text"><br>
-        Issue Date <input type="date"><br>
-        Effective Date <input type="date"><br>
+        Version No <input type="text" class="detail-input"><br>
+        Issue Date <input type="date" class="detail-input"><br>
+        Effective Date <input type="date" class="detail-input"><br>
       `}
-      <input type="file">
+      <input type="file" accept="image/*" onchange="showPreview(event, '${qid}Img')">
+      <br><img id="${qid}Img" class="preview-img">
     </div>
     <hr>
   `);
@@ -262,3 +271,4 @@ function applyLanguage(){
 
 </body>
 </html>
+
