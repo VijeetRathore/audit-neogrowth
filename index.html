@@ -137,7 +137,55 @@ function questionBlock(qid){
 
 </div>
 
-<button onclick="alert('Form ready. Google Sheet integration next.')">Submit</button>
+<button onclick="submitForm()">Submit Audit to Excel</button>
+  async function submitForm() {
+    const submitBtn = event.target;
+    submitBtn.innerText = "Sending...";
+    submitBtn.disabled = true;
+
+    // Sabhi questions ka data ek loop mein nikalne ke liye
+    const auditData = {
+        state: document.getElementById('state').value,
+        branch: document.getElementById('branch').value,
+        branchHead: document.getElementById('branchHead').value,
+        officeBoy: document.getElementById('officeBoy').value,
+        responses: {}
+    };
+
+    // Q1 se Q18 tak ka data check karna
+    for(let i=1; i<=18; i++) {
+        let qid = 'q' + i;
+        let radio = document.querySelector(`input[name="${qid}"]:checked`);
+        let img = document.getElementById(qid + 'Img');
+        
+        auditData.responses[qid] = {
+            answer: radio ? radio.value : "No Selection",
+            photo: (img && img.src.startsWith('data:image')) ? img.src : "" // Base64 string
+        };
+    }
+
+    const webhookURL = "YOUR_POWER_AUTOMATE_URL"; // Yahan apna URL paste karein
+
+    try {
+        const response = await fetch(webhookURL, {
+            method: "POST",
+            body: JSON.stringify(auditData),
+            headers: {"Content-Type": "application/json"}
+        });
+
+        if (response.ok) {
+            alert("Data aur Photos Excel mein save ho gaye hain!");
+        } else {
+            alert("Error: Data nahi bheja ja saka.");
+        }
+    } catch (err) {
+        console.error(err);
+        alert("Connection Error!");
+    } finally {
+        submitBtn.innerText = "Submit Audit to Excel";
+        submitBtn.disabled = false;
+    }
+}
 
 <!-- ================= SCRIPT ================= -->
 
@@ -307,5 +355,6 @@ function showPreview(event, imgId) {
 
 </body>
 </html>
+
 
 
