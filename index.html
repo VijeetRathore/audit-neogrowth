@@ -99,31 +99,40 @@ function questionBlock(qid){
 <!-- File only questions -->
 <script>
 ["q11","q12","q13","q14","q15","q16"].forEach(q=>{
-document.write(`
-<p id="${q}Text"></p>
-<input type="radio" name="${q}" onclick="toggle('${q}',true)"> Yes
-<input type="radio" name="${q}" onclick="toggle('${q}',false)"> No
-<div id="${q}" class="hidden"><input type="file"></div>
-<hr>
-`);
+  document.write(`
+    <p id="${q}Text"></p>
+    <input type="radio" name="${q}" onclick="toggle('${q}',true)"> Yes
+    <input type="radio" name="${q}" onclick="toggle('${q}',false)"> No
+    <div id="${q}" class="hidden">
+      <input type="file" accept="image/*" onchange="showPreview(event, '${q}Img')">
+      <br><img id="${q}Img" class="preview-img">
+    </div>
+    <hr>
+  `);
 });
 </script>
 
 <!-- Trade License -->
 <div id="tradeSection" class="hidden">
-<p id="q17Text"></p>
-<input type="radio" name="q17"> Yes
-<input type="radio" name="q17"> No
-<input type="file">
-<hr>
+  <p id="q17Text"></p>
+  <input type="radio" name="q17" onclick="toggle('q17Div',true)"> Yes
+  <input type="radio" name="q17" onclick="toggle('q17Div',false)"> No
+  <div id="q17Div" class="hidden">
+    <input type="file" accept="image/*" onchange="showPreview(event, 'q17Img')">
+    <br><img id="q17Img" class="preview-img">
+  </div>
+  <hr>
 </div>
 
 <!-- ISO -->
 <div id="isoSection" class="hidden">
-<p id="q18Text"></p>
-<input type="radio" name="q18"> Yes
-<input type="radio" name="q18"> No
-<input type="file">
+  <p id="q18Text"></p>
+  <input type="radio" name="q18" onclick="toggle('q18Div',true)"> Yes
+  <input type="radio" name="q18" onclick="toggle('q18Div',false)"> No
+  <div id="q18Div" class="hidden">
+    <input type="file" accept="image/*" onchange="showPreview(event, 'q18Img')">
+    <br><img id="q18Img" class="preview-img">
+  </div>
 </div>
 
 </div>
@@ -267,8 +276,36 @@ function applyLanguage(){
    document.getElementById(q+"Text").innerText=QUESTIONS[q][lang];
  });
 }
+  // Photo preview dikhane ke liye ye function zaroori hai
+function showPreview(event, imgId) {
+  const file = event.target.files[0];
+  const preview = document.getElementById(imgId);
+  
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      preview.src = e.target.result;
+      preview.style.display = "block"; // Image select hote hi dikh jayegi
+    };
+    reader.readAsDataURL(file);
+  }
+}
+  function showPreview(event, imgId) {
+  const file = event.target.files[0];
+  const preview = document.getElementById(imgId);
+  
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      preview.src = e.target.result;
+      preview.style.display = "block"; // Image select hone par dikhayen
+    };
+    reader.readAsDataURL(file);
+  }
+}
 </script>
 
 </body>
 </html>
+
 
