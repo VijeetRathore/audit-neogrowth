@@ -138,12 +138,52 @@ function questionBlock(qid){
 </div>
 
 <button onclick="submitForm()">Submit Audit to Excel</button>
- <script>
-async function submitForm() {
+ <script>async function submitForm() {
   const submitBtn = event.target;
   submitBtn.innerText = "Sending...";
   submitBtn.disabled = true;
 
+  // ================= VALIDATION CODE START (Yahan paste karein) =================
+  const requiredIds = ['state', 'branch', 'branchHead', 'officeBoy'];
+  let firstErrorField = null;
+
+  requiredIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el.value.trim()) {
+      el.style.border = "2px solid red"; 
+      if (!firstErrorField) firstErrorField = el;
+    } else {
+      el.style.border = ""; 
+    }
+  });
+
+  for (let i = 1; i <= 18; i++) {
+    const qid = 'q' + i;
+    const qText = document.getElementById(qid + 'Text');
+    const isVisible = qText && qText.offsetParent !== null;
+
+    if (isVisible) {
+      const radioChecked = document.querySelector(`input[name="${qid}"]:checked`);
+      if (!radioChecked) {
+        qText.style.color = "red"; 
+        if (!firstErrorField) firstErrorField = qText;
+      } else {
+        qText.style.color = ""; 
+      }
+    }
+  }
+
+  if (firstErrorField) {
+    firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    alert("Kripya saari jankari bharein (Red highlighted).");
+    submitBtn.innerText = "Submit Audit to Excel";
+    submitBtn.disabled = false;
+    return; 
+  }
+  // ================= VALIDATION CODE END =================
+
+  // Iske niche aapka purana auditData collection wala logic rahega...
+  
   const auditData = {
     state: document.getElementById('state').value,
     branch: document.getElementById('branch').value,
@@ -356,6 +396,7 @@ function showPreview(event, imgId) {
 
 </body>
 </html>
+
 
 
 
