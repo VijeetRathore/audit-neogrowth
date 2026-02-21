@@ -157,7 +157,7 @@ function questionBlock(qid){
     }
   });
 
- for (let i = 1; i <= 18; i++) {
+for (let i = 1; i <= 18; i++) {
     const qid = 'q' + i;
     const qText = document.getElementById(qid + 'Text');
     const isVisible = qText && qText.offsetParent !== null;
@@ -166,27 +166,46 @@ function questionBlock(qid){
       const radioChecked = document.querySelector(`input[name="${qid}"]:checked`);
       const imgElement = document.getElementById(qid + 'Img');
       const isPhotoSelected = imgElement && imgElement.src && imgElement.src.startsWith('data:image');
+      
+      // --- Date Validation Logic ---
+      const dateInputs = document.querySelectorAll(`#${qid} input[type="date"]`);
+      let isDateInvalid = false;
+      const currentYear = new Date().getFullYear();
 
+      dateInputs.forEach(input => {
+        if (input.value) {
+          const inputYear = new Date(input.value).getFullYear();
+          // 2000 se purani ya future ki bahut aage ki dates block karein
+          if (inputYear < 2019 || inputYear > 2026) {
+            isDateInvalid = true;
+            input.style.border = "2px solid red";
+          } else {
+            input.style.border = "";
+          }
+        }
+      });
+
+      // --- Main Checks ---
       if (!radioChecked) {
         qText.style.color = "red"; 
         if (!firstErrorField) firstErrorField = qText;
       } 
       else if (radioChecked.value === "Yes" && !isPhotoSelected) {
         qText.style.color = "red";
-        // Agar pehle se text nahi joda hai toh hi jodein
-        if (!qText.innerText.includes("(PHOTO MISSING!)")) {
-          qText.innerText += " (PHOTO MISSING!)";
-        }
+        if (!qText.innerText.includes("(PHOTO MISSING!)")) qText.innerText += " (PHOTO MISSING!)";
+        if (!firstErrorField) firstErrorField = qText;
+      }
+      else if (isDateInvalid) {
+        qText.style.color = "red";
+        if (!qText.innerText.includes("(INVALID DATE!)")) qText.innerText += " (INVALID DATE!)";
         if (!firstErrorField) firstErrorField = qText;
       }
       else {
         qText.style.color = ""; 
-        // Reset text if fixed
-        qText.innerText = qText.innerText.replace(" (PHOTO MISSING!)", "");
+        qText.innerText = qText.innerText.replace(" (PHOTO MISSING!)", "").replace(" (INVALID DATE!)", "");
       }
     }
   }
-
   if (firstErrorField) {
     firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
     alert("Kripya saari jankari bharein (Red highlighted).");
@@ -410,6 +429,7 @@ function showPreview(event, imgId) {
 
 </body>
 </html>
+
 
 
 
