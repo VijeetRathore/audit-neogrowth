@@ -137,7 +137,9 @@ function questionBlock(qid){
 
 </div>
 
-<button onclick="submitForm()">Submit Audit to Excel</button>
+<button onclick="submitForm()" id="mainSubmitBtn">
+  <span id="btnText">Submit Audit to Excel</span>
+</button>
  <script>async function submitForm() {
   const submitBtn = event.target;
   submitBtn.innerText = "Sending...";
@@ -392,26 +394,62 @@ const STATE_LANG={
 "Odisha":"hi","Puducherry":"ta","Jharkhand":"hi","Chandigarh":"hi"
 };
 
+// Is variable ko function ke bahar rakhein taaki submitForm ise use kar sake
+let currentMessages = {}; 
+
 function applyLanguage(){
  const lang = state.value === "" ? "hi" : (STATE_LANG[state.value] || "hi");
  
- // Sawaal translate karein
+ // 1. Sawaal translate karein
  Object.keys(QUESTIONS).forEach(q=>{
    const el = document.getElementById(q+"Text");
    if(el) el.innerText = QUESTIONS[q][lang];
  });
 
- // Yes/No translate karein
- const labels = {
-   hi: {y: "हाँ / Yes", n: "नहीं / No"},
-   te: {y: "అవును / Yes", n: "కాదు / No"},
-   ta: {y: "ஆம் / Yes", n: "இல்லை / No"},
-   kn: {y: "ಹೌದು / Yes", n: "ಇಲ್ಲ / No"}
+ // 2. Labels aur Buttons ke translations
+ const msgLabels = {
+   hi: {
+     y: "हाँ / Yes", n: "नहीं / No",
+     next: "save और आगे बढ़ें / Save & Next",
+    back: "पीछे जाएं / Back",
+     photo: "फोटो अपलोड करें। / UPLOAD PHOTO!",
+     date: "Date ठीक करें / WRONG DATE!",
+     pending: "कृपया सारी जानकारी भरें (लाल रंग में हाईलाइट किया गया)। / fill all details (highlighted in red).",
+     success: "Report सबमिट हो गया है! / Report Submitted successfully."
+   },
+   te: {
+     y: "అవును / Yes", n: "కాదు / No",
+     photo: "ఫోటోను అప్‌లోడ్ చేయండి / UPLOAD PHOTO!",
+     date: "తేదీని నిర్ణయించండి / INVALID DATE!",
+     pending: "దయచేసి అన్ని వివరాలను పూరించండి (ఎరుపు రంగులో హైలైట్ చేయబడింది). / Please fill all details (highlighted in red).",
+     success: "నివేదిక విజయవంతంగా సమర్పించబడింది. / Report Submitted successfully."
+   },
+   ta: {
+     y: "ஆம் / Yes", n: "இல்லை / No",
+     photo: "புகைப்படத்தை பதிவேற்றவும் / UPLOAD PHOTO!",
+     date: "தேதியை நிர்ணயிக்கவும் / INVALID DATE!",
+     pending: "தயவுசெய்து அனைத்து விவரங்களையும் நிரப்பவும் (சிவப்பு நிறத்தில் சிறப்பிக்கப்பட்டுள்ளது). / Please fill all details (highlighted in red).",
+     success: "அறிக்கை வெற்றிகரமாக சமர்ப்பிக்கப்பட்டது.. / Report Submitted successfully."
+   },
+   kn: {
+     y: "ಹೌದು / Yes", n: "ಇಲ್ಲ / No",
+     photo: "ಫೋಟೋ ಅಪ್ಲೋಡ್ / UPLOAD PHOTO!",
+     date: "ದಿನಾಂಕವನ್ನು ನಿಗದಿಪಡಿಸಿ / INVALID DATE!",
+     pending: "ದಯವಿಟ್ಟು ಎಲ್ಲಾ ವಿವರಗಳನ್ನು ಭರ್ತಿ ಮಾಡಿ (ಕೆಂಪು ಬಣ್ಣದಲ್ಲಿ ಹೈಲೈಟ್ ಮಾಡಲಾಗಿದೆ). / Please fill all details (highlighted in red).",
+     success: "ವರದಿಯನ್ನು ಯಶಸ್ವಿಯಾಗಿ ಸಲ್ಲಿಸಲಾಗಿದೆ. / Report Submitted successfully."
+   }
  };
 
- document.querySelectorAll(".yesText").forEach(el => el.innerText = labels[lang].y);
- document.querySelectorAll(".noText").forEach(el => el.innerText = labels[lang].n);
+ currentMessages = msgLabels[lang];
+
+ // 3. Yes/No aur Button translate karein
+ document.querySelectorAll(".yesText").forEach(el => el.innerText = currentMessages.y);
+ document.querySelectorAll(".noText").forEach(el => el.innerText = currentMessages.n);
+ 
+ const btnLabel = document.getElementById("btnText");
+ if(btnLabel) btnLabel.innerText = currentMessages.submit;
 }
+  
   // Photo preview dikhane ke liye ye function zaroori hai
 function showPreview(event, imgId) {
   const file = event.target.files[0];
@@ -443,6 +481,7 @@ function showPreview(event, imgId) {
 
 </body>
 </html>
+
 
 
 
