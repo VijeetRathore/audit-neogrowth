@@ -170,16 +170,15 @@ async function submitForm() {
 
   try {
     const response = await fetch(webhookURL, {
-      method: "POST",
-      body: JSON.stringify(auditData),
-      headers: { "Content-Type": "application/json" }
-    });
+  method: "POST",
+  mode: "no-cors", // <--- Yeh line add karein
+  body: JSON.stringify(auditData),
+  headers: { "Content-Type": "text/plain;charset=utf-8" } // <--- Ise badal dein
+});
 
-    if (response.ok) {
-      alert("Data aur Photos Excel mein save ho gaye hain!");
-    } else {
-      alert("Error: Data nahi bheja ja saka.");
-    }
+    // no-cors mode mein response read nahi hota, isliye hum assume karte hain ki data chala gaya
+alert("Audit Submit ho gaya hai! Kripya Excel sheet check karein.");
+    
   } catch (err) {
     console.error(err);
     alert("Connection Error!");
@@ -357,6 +356,7 @@ function showPreview(event, imgId) {
 
 </body>
 </html>
+
 
 
 
