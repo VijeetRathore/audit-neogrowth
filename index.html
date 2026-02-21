@@ -153,18 +153,20 @@ function questionBlock(qid){
     };
 
     // Q1 se Q18 tak ka data check karna
-    for(let i=1; i<=18; i++) {
-        let qid = 'q' + i;
-        let radio = document.querySelector(`input[name="${qid}"]:checked`);
-        let img = document.getElementById(qid + 'Img');
-        
-        auditData.responses[qid] = {
-            answer: radio ? radio.value : "No Selection",
-            photo: (img && img.src.startsWith('data:image')) ? img.src : "" // Base64 string
-        };
-    }
+for(let i=1; i<=18; i++) {
+  let qid = 'q' + i;
+  let radio = document.querySelector(`input[name="${qid}"]:checked`);
+  let img = document.getElementById(qid + 'Img');
 
-    const webhookURL = "YOUR_POWER_AUTOMATE_URL"; // Yahan apna URL paste karein
+  auditData.responses[qid] = {
+    answer: radio ? radio.value : "",
+    version: document.querySelector(`#${qid} input.detail-input:nth-of-type(1)`)?.value || "",
+    issueDate: document.querySelector(`#${qid} input.detail-input:nth-of-type(2)`)?.value || "",
+    effectiveDate: document.querySelector(`#${qid} input.detail-input:nth-of-type(3)`)?.value || "",
+    photo: (img && img.src.startsWith('data:image')) ? img.src : ""
+  };
+}
+    const webhookURL = "https://script.google.com/macros/s/AKfycbypcxId7PS2IXjc8f0P0thk--CUjTDDTur7RltmNNyd0eXJiidXaXe5bo_QnLbg8KXv/exec"; // Yahan apna URL paste karein
 
     try {
         const response = await fetch(webhookURL, {
@@ -355,6 +357,7 @@ function showPreview(event, imgId) {
 
 </body>
 </html>
+
 
 
 
