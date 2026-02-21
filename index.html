@@ -138,57 +138,57 @@ function questionBlock(qid){
 </div>
 
 <button onclick="submitForm()">Submit Audit to Excel</button>
-  async function submitForm() {
-    const submitBtn = event.target;
-    submitBtn.innerText = "Sending...";
-    submitBtn.disabled = true;
+ <script>
+async function submitForm() {
+  const submitBtn = event.target;
+  submitBtn.innerText = "Sending...";
+  submitBtn.disabled = true;
 
-    // Sabhi questions ka data ek loop mein nikalne ke liye
-    const auditData = {
-        state: document.getElementById('state').value,
-        branch: document.getElementById('branch').value,
-        branchHead: document.getElementById('branchHead').value,
-        officeBoy: document.getElementById('officeBoy').value,
-        responses: {}
-    };
-
-    // Q1 se Q18 tak ka data check karna
-for(let i=1; i<=18; i++) {
-  let qid = 'q' + i;
-  let radio = document.querySelector(`input[name="${qid}"]:checked`);
-  let img = document.getElementById(qid + 'Img');
-
-  auditData.responses[qid] = {
-    answer: radio ? radio.value : "",
-    version: document.querySelector(`#${qid} input.detail-input:nth-of-type(1)`)?.value || "",
-    issueDate: document.querySelector(`#${qid} input.detail-input:nth-of-type(2)`)?.value || "",
-    effectiveDate: document.querySelector(`#${qid} input.detail-input:nth-of-type(3)`)?.value || "",
-    photo: (img && img.src.startsWith('data:image')) ? img.src : ""
+  const auditData = {
+    state: document.getElementById('state').value,
+    branch: document.getElementById('branch').value,
+    branchHead: document.getElementById('branchHead').value,
+    officeBoy: document.getElementById('officeBoy').value,
+    responses: {}
   };
-}
-    const webhookURL = "https://script.google.com/macros/s/AKfycbypcxId7PS2IXjc8f0P0thk--CUjTDDTur7RltmNNyd0eXJiidXaXe5bo_QnLbg8KXv/exec"; // Yahan apna URL paste karein
 
-    try {
-        const response = await fetch(webhookURL, {
-            method: "POST",
-            body: JSON.stringify(auditData),
-            headers: {"Content-Type": "application/json"}
-        });
+  for (let i = 1; i <= 18; i++) {
+    let qid = 'q' + i;
+    let radio = document.querySelector(`input[name="${qid}"]:checked`);
+    let img = document.getElementById(qid + 'Img');
 
-        if (response.ok) {
-            alert("Data aur Photos Excel mein save ho gaye hain!");
-        } else {
-            alert("Error: Data nahi bheja ja saka.");
-        }
-    } catch (err) {
-        console.error(err);
-        alert("Connection Error!");
-    } finally {
-        submitBtn.innerText = "Submit Audit to Excel";
-        submitBtn.disabled = false;
+    auditData.responses[qid] = {
+      answer: radio ? radio.value : "",
+      version: document.querySelector(`#${qid} input.detail-input:nth-of-type(1)`)?.value || "",
+      issueDate: document.querySelector(`#${qid} input.detail-input:nth-of-type(2)`)?.value || "",
+      effectiveDate: document.querySelector(`#${qid} input.detail-input:nth-of-type(3)`)?.value || "",
+      photo: (img && img.src.startsWith('data:image')) ? img.src : ""
+    };
+  }
+
+  const webhookURL = "https://script.google.com/macros/s/AKfycbypcxId7PS2IXjc8f0P0thk--CUjTDDTur7RltmNNyd0eXJiidXaXe5bo_QnLbg8KXv/exec";
+
+  try {
+    const response = await fetch(webhookURL, {
+      method: "POST",
+      body: JSON.stringify(auditData),
+      headers: { "Content-Type": "application/json" }
+    });
+
+    if (response.ok) {
+      alert("Data aur Photos Excel mein save ho gaye hain!");
+    } else {
+      alert("Error: Data nahi bheja ja saka.");
     }
+  } catch (err) {
+    console.error(err);
+    alert("Connection Error!");
+  } finally {
+    submitBtn.innerText = "Submit Audit to Excel";
+    submitBtn.disabled = false;
+  }
 }
-
+</script>
 <!-- ================= SCRIPT ================= -->
 
 <script>
@@ -357,6 +357,7 @@ function showPreview(event, imgId) {
 
 </body>
 </html>
+
 
 
 
