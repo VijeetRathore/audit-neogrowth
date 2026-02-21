@@ -157,18 +157,32 @@ function questionBlock(qid){
     }
   });
 
-  for (let i = 1; i <= 18; i++) {
+ for (let i = 1; i <= 18; i++) {
     const qid = 'q' + i;
     const qText = document.getElementById(qid + 'Text');
     const isVisible = qText && qText.offsetParent !== null;
 
     if (isVisible) {
       const radioChecked = document.querySelector(`input[name="${qid}"]:checked`);
+      const imgElement = document.getElementById(qid + 'Img');
+      const isPhotoSelected = imgElement && imgElement.src && imgElement.src.startsWith('data:image');
+
       if (!radioChecked) {
         qText.style.color = "red"; 
         if (!firstErrorField) firstErrorField = qText;
-      } else {
+      } 
+      else if (radioChecked.value === "Yes" && !isPhotoSelected) {
+        qText.style.color = "red";
+        // Agar pehle se text nahi joda hai toh hi jodein
+        if (!qText.innerText.includes("(PHOTO MISSING!)")) {
+          qText.innerText += " (PHOTO MISSING!)";
+        }
+        if (!firstErrorField) firstErrorField = qText;
+      }
+      else {
         qText.style.color = ""; 
+        // Reset text if fixed
+        qText.innerText = qText.innerText.replace(" (PHOTO MISSING!)", "");
       }
     }
   }
@@ -396,6 +410,7 @@ function showPreview(event, imgId) {
 
 </body>
 </html>
+
 
 
 
