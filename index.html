@@ -312,7 +312,7 @@ async function submitAndNext(btn) {
 }
   async function submitForm(btn) {
   const submitBtn = btn;
-  submitBtn.innerText = "Sending...";
+  submitBtn.innerText = (currentMessages?.wait || "Sending...");
   submitBtn.disabled = true;
   showOverlay();
 
@@ -402,7 +402,7 @@ else {
   if (firstErrorField) {
     firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
     alert("Kripya saari jankari bharein (Red highlighted).");
-    submitBtn.innerText = "Submit and move to next page";
+    submitBtn.innerText = (currentMessages?.next || "Submit and move to next page");
     submitBtn.disabled = false;
     hideOverlay();
     return false;
@@ -479,7 +479,7 @@ return true;
     hideOverlay();
     return false;
   } finally {
-    submitBtn.innerText = "Submit and move to next page";
+    submitBtn.innerText = (currentMessages?.next || "Submit and move to next page");
     submitBtn.disabled = false;
   }
 }
@@ -740,6 +740,7 @@ function showPreview(event, imgId) {
   
 </body>
 </html>
+
 
 
 
