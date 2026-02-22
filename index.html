@@ -383,6 +383,7 @@ for (let i = 1; i <= 18; i++) {
     alert("Kripya saari jankari bharein (Red highlighted).");
     submitBtn.innerText = "Submit and move to next page";
     submitBtn.disabled = false;
+    hideOverlay();
     return false;
   }
   // ================= VALIDATION CODE END =================
@@ -454,9 +455,10 @@ return true;
   } catch (err) {
     console.error(err);
     alert("Connection Error!");
+    hideOverlay();
     return false;
   } finally {
-    submitBtn.innerText = "Submit Audit to Excel";
+    submitBtn.innerText = "Submit and move to next page";
     submitBtn.disabled = false;
   }
 }
@@ -698,6 +700,7 @@ function showPreview(event, imgId) {
   
 </body>
 </html>
+
 
 
 
