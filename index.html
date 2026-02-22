@@ -19,12 +19,20 @@ hr{margin:15px 0}
   border: 1px solid #ddd;
   display: none; /* Shuruat mein hidden rahega */
 }
+/* multi-page */
+.form-page{display:none}
+.form-page.active{display:block}
+.navbar{display:flex;gap:10px;margin-top:20px}
+.navbar button{padding:10px 14px;cursor:pointer}
 </style>
 </head>
 
 <body>
 
 <h2>Branch Compliance Audit</h2>
+<!-- ====== MULTI-PAGE WRAPPER START ====== -->
+<div id="page1" class="form-page active">
+  <h3>Page 1</h3>  
 
 <!-- ================= BASIC DETAILS ================= -->
 
@@ -134,14 +142,45 @@ function questionBlock(qid){
     <br><img id="q18Img" class="preview-img">
   </div>
 </div>
-
 </div>
+  <!-- Page 1 Buttons -->
+  <div class="navbar">
+    <button type="button" onclick="prevPage()" disabled>Back</button>
+    <button type="button" onclick="submitAndNext(this)">
+      Submit and move to next page
+    </button>
+  </div>
 
-<button onclick="submitForm()" id="mainSubmitBtn">
-  <span id="btnText">Submit Audit to Excel</span>
-</button>
- <script>async function submitForm() {
-  const submitBtn = event.target;
+</div> <!-- PAGE 1 CLOSE -->
+
+ <script>
+   let currentPage = 1;
+const totalPages = 6;
+function showPage(pageNumber) {
+  document.querySelectorAll('.form-page').forEach(p => {
+    p.classList.remove('active');
+  });
+  const nextPage = document.getElementById('page' + pageNumber);
+  if (nextPage) {
+    nextPage.classList.add('active');
+    currentPage = pageNumber;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+function prevPage() {
+  if (currentPage > 1) {
+    showPage(currentPage - 1);
+  }
+}
+async function submitAndNext(btn) {
+  const success = await submitForm(btn);
+
+  if (success && currentPage < totalPages) {
+    showPage(currentPage + 1);
+  }
+}
+  async function submitForm(btn) {
+  const submitBtn = btn;
   submitBtn.innerText = "Sending...";
   submitBtn.disabled = true;
 
@@ -481,6 +520,7 @@ function showPreview(event, imgId) {
 
 </body>
 </html>
+
 
 
 
