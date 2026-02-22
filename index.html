@@ -207,55 +207,51 @@ function questionBlock(qid){
 </div>
   <!-- Page 1 Buttons -->
   <div class="navbar">
-    <button type="button" onclick="prevPage()" disabled>Back</button>
-    <button type="button" onclick="submitAndNext(this)">
-      Submit and move to next page
-    </button>
-  </div>
+  <button type="button" class="btn-back" onclick="prevPage()" disabled>Back</button>
+  <button type="button" class="btn-next" onclick="submitAndNext(this)">
+    Submit and move to next page
+  </button>
+</div>
 
 </div> <!-- PAGE 1 CLOSE -->
 <div id="page2" class="form-page">
   <h3>Page 2</h3>
   <p>Page 2 questions yahan add honge.</p>
   <div class="navbar">
-    <button type="button" onclick="prevPage()">Back</button>
-    <button type="button" onclick="submitAndNext(this)">Submit and move to next page</button>
+ <button type="button" class="btn-back" onclick="prevPage()">Back</button>
+<button type="button" class="btn-next" onclick="submitAndNext(this)">Submit and move to next page</button>
   </div>
 </div>
 
 <div id="page3" class="form-page">
   <h3>Page 3</h3>
   <p>Page 3 questions yahan add honge.</p>
-  <div class="navbar">
-    <button type="button" onclick="prevPage()">Back</button>
-    <button type="button" onclick="submitAndNext(this)">Submit and move to next page</button>
+  <div class="navbar"><button type="button" class="btn-back" onclick="prevPage()">Back</button>
+<button type="button" class="btn-next" onclick="submitAndNext(this)">Submit and move to next page</button>
   </div>
 </div>
 
 <div id="page4" class="form-page">
   <h3>Page 4</h3>
   <p>Page 4 questions yahan add honge.</p>
-  <div class="navbar">
-    <button type="button" onclick="prevPage()">Back</button>
-    <button type="button" onclick="submitAndNext(this)">Submit and move to next page</button>
+  <div class="navbar"><button type="button" class="btn-back" onclick="prevPage()">Back</button>
+<button type="button" class="btn-next" onclick="submitAndNext(this)">Submit and move to next page</button>
   </div>
 </div>
 
 <div id="page5" class="form-page">
   <h3>Page 5</h3>
   <p>Page 5 questions yahan add honge.</p>
-  <div class="navbar">
-    <button type="button" onclick="prevPage()">Back</button>
-    <button type="button" onclick="submitAndNext(this)">Submit and move to next page</button>
+  <div class="navbar"><button type="button" class="btn-back" onclick="prevPage()">Back</button>
+<button type="button" class="btn-next" onclick="submitAndNext(this)">Submit and move to next page</button>
   </div>
 </div>
 
 <div id="page6" class="form-page">
   <h3>Page 6</h3>
   <p>Page 6 questions yahan add honge.</p>
-  <div class="navbar">
-    <button type="button" onclick="prevPage()">Back</button>
-    <button type="button" onclick="submitAndNext(this)">Final Submit</button>
+  <div class="navbar"><button type="button" class="btn-back" onclick="prevPage()">Back</button>
+    <button type="button" class="btn-next" onclick="submitAndNext(this)">Final Submit</button>
   </div>
 </div>
   
@@ -625,6 +621,8 @@ function applyLanguage(){
    },
    te: {
      y: "అవును / Yes", n: "కాదు / No",
+    next: "సేవ్ చేసి కొనసాగండి / Save & Next",
+    back: "మునుపటి పేజీకి వెళ్ళండి / Back",
      photo: "ఫోటోను అప్‌లోడ్ చేయండి / UPLOAD PHOTO!",
      date: "తేదీని నిర్ణయించండి / INVALID DATE!",
      pending: "దయచేసి అన్ని వివరాలను పూరించండి (ఎరుపు రంగులో హైలైట్ చేయబడింది). / Please fill all details (highlighted in red).",
@@ -633,6 +631,8 @@ function applyLanguage(){
    },
    ta: {
      y: "ஆம் / Yes", n: "இல்லை / No",
+       next: "சேமித்து தொடரவும் / Save & Next",
+    back: "முந்தைய பக்கத்திற்கு செல்லவும் / Back",
      photo: "புகைப்படத்தை பதிவேற்றவும் / UPLOAD PHOTO!",
      date: "தேதியை நிர்ணயிக்கவும் / INVALID DATE!",
      pending: "தயவுசெய்து அனைத்து விவரங்களையும் நிரப்பவும் (சிவப்பு நிறத்தில் சிறப்பிக்கப்பட்டுள்ளது). / Please fill all details (highlighted in red).",
@@ -641,6 +641,8 @@ function applyLanguage(){
    },
    kn: {
      y: "ಹೌದು / Yes", n: "ಇಲ್ಲ / No",
+       next: "ಉಳಿಸಿ ಮತ್ತು ಮುಂದುವರೆಯಿರಿ / Save & Next",
+    back: "पಹಿಂದಿನ ಪುಟಕ್ಕೆ ಹೋಗಿ / Back",
      photo: "ಫೋಟೋ ಅಪ್ಲೋಡ್ / UPLOAD PHOTO!",
      date: "ದಿನಾಂಕವನ್ನು ನಿಗದಿಪಡಿಸಿ / INVALID DATE!",
      pending: "ದಯವಿಟ್ಟು ಎಲ್ಲಾ ವಿವರಗಳನ್ನು ಭರ್ತಿ ಮಾಡಿ (ಕೆಂಪು ಬಣ್ಣದಲ್ಲಿ ಹೈಲೈಟ್ ಮಾಡಲಾಗಿದೆ). / Please fill all details (highlighted in red).",
@@ -650,6 +652,14 @@ function applyLanguage(){
  };
 
  currentMessages = msgLabels[lang];
+  // Back aur Next buttons translate karein
+document.querySelectorAll(".btn-back").forEach(b => 
+  b.innerText = currentMessages.back || "Back"
+);
+
+document.querySelectorAll(".btn-next").forEach(b => 
+  b.innerText = currentMessages.next || "Save & Next"
+);
 
  // 3. Yes/No aur Button translate karein
  document.querySelectorAll(".yesText").forEach(el => el.innerText = currentMessages.y);
@@ -706,6 +716,7 @@ function showPreview(event, imgId) {
   
 </body>
 </html>
+
 
 
 
