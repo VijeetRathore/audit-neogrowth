@@ -294,9 +294,9 @@ for (let i = 1; i <= 18; i++) {
   if (firstErrorField) {
     firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
     alert("Kripya saari jankari bharein (Red highlighted).");
-    submitBtn.innerText = "Submit Audit to Excel";
+    submitBtn.innerText = "Submit and move to next page";
     submitBtn.disabled = false;
-    return; 
+    return false;
   }
   // ================= VALIDATION CODE END =================
 
@@ -336,10 +336,12 @@ for (let i = 1; i <= 18; i++) {
 
     // no-cors mode mein response read nahi hota, isliye hum assume karte hain ki data chala gaya
 alert("Audit Submit ho gaya hai! Kripya Excel sheet check karein.");
+    return true;
     
   } catch (err) {
     console.error(err);
     alert("Connection Error!");
+    return false;
   } finally {
     submitBtn.innerText = "Submit Audit to Excel";
     submitBtn.disabled = false;
@@ -564,6 +566,7 @@ function showPreview(event, imgId) {
 
 </body>
 </html>
+
 
 
 
