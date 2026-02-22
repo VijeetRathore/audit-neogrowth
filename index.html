@@ -213,13 +213,110 @@ function questionBlock(qid){
   </button>
 </div>
 
-</div> <!-- PAGE 1 CLOSE -->
 <div id="page2" class="form-page">
   <h3>Page 2</h3>
-  <p>Page 2 questions yahan add honge.</p>
+
+  <!-- Q19 -->
+  <p id="q19Text"></p>
+  <label><input type="radio" name="q19" value="Yes" onclick="toggle('q19Div',true)"> <span class="yesText">Yes</span></label>
+  <label><input type="radio" name="q19" value="No" onclick="toggle('q19Div',false)"> <span class="noText">No</span></label>
+  <div id="q19Div" class="hidden">
+    <input type="file" accept="image/*" onchange="showPreview(event,'q19Img')">
+    <br><img id="q19Img" class="preview-img">
+  </div>
+  <hr>
+
+  <!-- Q20 -->
+  <p id="q20Text"></p>
+  <label><input type="radio" name="q20" value="Yes" onclick="toggle('q20Div',true)"> <span class="yesText">Yes</span></label>
+  <label><input type="radio" name="q20" value="No" onclick="toggle('q20Div',false)"> <span class="noText">No</span></label>
+  <div id="q20Div" class="hidden">
+    <input type="file" accept="image/*" onchange="showPreview(event,'q20Img')">
+    <br><img id="q20Img" class="preview-img">
+  </div>
+  <hr>
+
+  <!-- Q21 (Multi-photo + instruction) -->
+  <p id="q21Text"></p>
+  <label><input type="radio" name="q21" value="Yes" onclick="toggle('q21Div',true)"> <span class="yesText">Yes</span></label>
+  <label><input type="radio" name="q21" value="No" onclick="toggle('q21Div',false)"> <span class="noText">No</span></label>
+  <div id="q21Div" class="hidden">
+    <div id="q21Tip" style="margin:8px 0; font-size:13px;"></div>
+
+    <div id="q21Photos"></div>
+    <button type="button" onclick="addMorePhoto('q21Photos')">+ Add more photo</button>
+  </div>
+  <hr>
+
+  <!-- Q22 -->
+  <p id="q22Text"></p>
+  <label><input type="radio" name="q22" value="Yes" onclick="toggle('q22Div',true)"> <span class="yesText">Yes</span></label>
+  <label><input type="radio" name="q22" value="No" onclick="toggle('q22Div',false)"> <span class="noText">No</span></label>
+  <div id="q22Div" class="hidden">
+    <input type="file" accept="image/*" onchange="showPreview(event,'q22Img')">
+    <br><img id="q22Img" class="preview-img">
+  </div>
+  <hr>
+
+  <!-- Q23 -->
+  <p id="q23Text"></p>
+  <label><input type="radio" name="q23" value="Yes" onclick="toggle('q23Div',true)"> <span class="yesText">Yes</span></label>
+  <label><input type="radio" name="q23" value="No" onclick="toggle('q23Div',false)"> <span class="noText">No</span></label>
+  <div id="q23Div" class="hidden">
+    <input type="file" accept="image/*" onchange="showPreview(event,'q23Img')">
+    <br><img id="q23Img" class="preview-img">
+  </div>
+  <hr>
+
+  <!-- Q24 -->
+  <p id="q24Text"></p>
+  <label><input type="radio" name="q24" value="Yes" onclick="toggle('q24Div',true)"> <span class="yesText">Yes</span></label>
+  <label><input type="radio" name="q24" value="No" onclick="toggle('q24Div',false)"> <span class="noText">No</span></label>
+  <div id="q24Div" class="hidden">
+    <input type="file" accept="image/*" onchange="showPreview(event,'q24Img')">
+    <br><img id="q24Img" class="preview-img">
+  </div>
+  <hr>
+
+  <!-- Q25 (Fire Extinguishers: count + N photos + N expiry dates) -->
+  <p id="q25Text"></p>
+  <label><input type="radio" name="q25" value="Yes" onclick="toggleFireExt(true)"> <span class="yesText">Yes</span></label>
+  <label><input type="radio" name="q25" value="No" onclick="toggleFireExt(false)"> <span class="noText">No</span></label>
+
+  <div id="q25Div" class="hidden">
+    <div style="margin:8px 0;">
+      <label id="q25CountLabel">Select number of fire extinguishers (max 15):</label><br>
+      <select id="q25Count" onchange="renderFireExtinguishers(this.value)">
+        <option value="">--Select--</option>
+      </select>
+    </div>
+
+    <div id="q25Items"></div>
+  </div>
+  <hr>
+
+  <!-- Q26 -->
+  <p id="q26Text"></p>
+  <label><input type="radio" name="q26" value="Yes" onclick="toggle('q26Div',true)"> <span class="yesText">Yes</span></label>
+  <label><input type="radio" name="q26" value="No" onclick="toggle('q26Div',false)"> <span class="noText">No</span></label>
+  <div id="q26Div" class="hidden">
+    <input type="file" accept="image/*" onchange="showPreview(event,'q26Img')">
+    <br><img id="q26Img" class="preview-img">
+  </div>
+  <hr>
+
+  <!-- Q27 -->
+  <p id="q27Text"></p>
+  <label><input type="radio" name="q27" value="Yes" onclick="toggle('q27Div',true)"> <span class="yesText">Yes</span></label>
+  <label><input type="radio" name="q27" value="No" onclick="toggle('q27Div',false)"> <span class="noText">No</span></label>
+  <div id="q27Div" class="hidden">
+    <input type="file" accept="image/*" onchange="showPreview(event,'q27Img')">
+    <br><img id="q27Img" class="preview-img">
+  </div>
+
   <div class="navbar">
- <button type="button" class="btn-back" onclick="prevPage()">Back</button>
-<button type="button" class="btn-next" onclick="submitAndNext(this)">Submit and move to next page</button>
+    <button type="button" class="btn-back" onclick="prevPage()">Back</button>
+    <button type="button" class="btn-next" onclick="submitAndNext(this)">Submit and move to next page</button>
   </div>
 </div>
 
@@ -740,6 +837,7 @@ function showPreview(event, imgId) {
   
 </body>
 </html>
+
 
 
 
