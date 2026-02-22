@@ -267,6 +267,10 @@ let currentProgress = 0;
 
 function showOverlay() {
   document.getElementById("submitOverlay").classList.remove("hidden");
+  // Dynamic wait message (English + Local)
+document.getElementById("overlayMessage").innerHTML =
+  "Wait submitting data...<br>" +
+  (currentMessages?.wait || "Please wait, submitting data...");
   currentProgress = 0;
   updateProgress(0);
 
@@ -682,10 +686,7 @@ function showPreview(event, imgId) {
   <!-- SUBMIT LOADING OVERLAY -->
 <div id="submitOverlay" class="hidden">
   <div class="overlay-box">
-    <div id="overlayMessage">
-      Wait submitting data... <br>
-      कृपया प्रतीक्षा करें, डेटा भेजा जा रहा है...
-    </div>
+    <div id="overlayMessage"></div>
 
     <div class="progress-bar">
       <div id="progressFill" class="progress-fill"></div>
@@ -701,6 +702,7 @@ function showPreview(event, imgId) {
   
 </body>
 </html>
+
 
 
 
