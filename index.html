@@ -24,6 +24,67 @@ hr{margin:15px 0}
 .form-page.active{display:block}
 .navbar{display:flex;gap:10px;margin-top:20px}
 .navbar button{padding:10px 14px;cursor:pointer}
+/* ===== SUCCESS TOAST ===== */
+.toast{
+  position:fixed;
+  bottom:30px;
+  left:50%;
+  transform:translateX(-50%);
+  background:#28a745;
+  color:white;
+  padding:14px 22px;
+  border-radius:8px;
+  font-size:16px;
+  box-shadow:0 4px 10px rgba(0,0,0,0.3);
+  z-index:9999;
+  opacity:0;
+  transition:opacity 0.4s ease;
+}
+.toast.show{
+  opacity:1;
+}
+.hidden{
+  display:none;
+}
+
+/* ===== LOADING OVERLAY ===== */
+#submitOverlay{
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:rgba(0,0,0,0.6);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:9998;
+}
+
+.overlay-box{
+  background:white;
+  padding:30px;
+  border-radius:10px;
+  text-align:center;
+  width:300px;
+}
+
+.progress-bar{
+  width:100%;
+  height:12px;
+  background:#ddd;
+  border-radius:10px;
+  overflow:hidden;
+  margin-top:15px;
+}
+
+.progress-fill{
+  height:100%;
+  width:0%;
+  background:#007bff;
+  transition:width 0.3s ease;
+}
+  
 </style>
 </head>
 
@@ -200,6 +261,31 @@ function questionBlock(qid){
  <script>
    let currentPage = 1;
 const totalPages = 6;
+   let progressInterval;
+let currentProgress = 0;
+
+function showOverlay() {
+  document.getElementById("submitOverlay").classList.remove("hidden");
+  currentProgress = 0;
+  updateProgress(0);
+
+  progressInterval = setInterval(() => {
+    if (currentProgress < 95) {
+      currentProgress += 1;
+      updateProgress(currentProgress);
+    }
+  }, 40); // smooth animation
+}
+
+function updateProgress(value) {
+  document.getElementById("progressFill").style.width = value + "%";
+  document.getElementById("progressText").innerText = value + "%";
+}
+
+function hideOverlay() {
+  clearInterval(progressInterval);
+  document.getElementById("submitOverlay").classList.add("hidden");
+}
 function showPage(pageNumber) {
   document.querySelectorAll('.form-page').forEach(p => {
     p.classList.remove('active');
@@ -227,6 +313,7 @@ async function submitAndNext(btn) {
   const submitBtn = btn;
   submitBtn.innerText = "Sending...";
   submitBtn.disabled = true;
+  showOverlay();
 
   // ================= VALIDATION CODE START (Yahan paste karein) =================
   const requiredIds = ['state', 'branch', 'branchHead', 'officeBoy'];
@@ -335,8 +422,34 @@ for (let i = 1; i <= 18; i++) {
 });
 
     // no-cors mode mein response read nahi hota, isliye hum assume karte hain ki data chala gaya
-alert("Audit Submit ho gaya hai! Kripya Excel sheet check karein.");
-    return true;
+// Progress ko 100% karein
+clearInterval(progressInterval);
+updateProgress(100);
+
+// Success message overlay mein (Dynamic Language)
+document.getElementById("overlayMessage").innerHTML =
+  "Submitted Successfully! <br>" +
+  (currentMessages?.success || "Data submitted successfully");
+
+// Overlay thoda rukega
+setTimeout(() => {
+  hideOverlay();
+
+  // Toast message (Dynamic)
+  const toast = document.getElementById("successToast");
+  toast.innerText =
+    (currentMessages?.success || "Data submitted successfully");
+  toast.classList.remove("hidden");
+  toast.classList.add("show");
+
+  setTimeout(() => {
+    toast.classList.remove("show");
+    toast.classList.add("hidden");
+  }, 3000);
+
+}, 800);
+
+return true;
     
   } catch (err) {
     console.error(err);
@@ -563,11 +676,29 @@ function showPreview(event, imgId) {
   }
 }
 </script>
+  <!-- SUBMIT LOADING OVERLAY -->
+<div id="submitOverlay" class="hidden">
+  <div class="overlay-box">
+    <div id="overlayMessage">
+      Wait submitting data... <br>
+      कृपया प्रतीक्षा करें, डेटा भेजा जा रहा है...
+    </div>
+
+    <div class="progress-bar">
+      <div id="progressFill" class="progress-fill"></div>
+    </div>
+
+    <div id="progressText" style="margin-top:10px;font-weight:bold;">
+      0%
+    </div>
+  </div>
+</div>
 <!-- SUCCESS TOAST -->
 <div id="successToast" class="toast hidden"></div>
   
 </body>
 </html>
+
 
 
 
