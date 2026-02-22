@@ -339,6 +339,12 @@ for (let i = 1; i <= 18; i++) {
       const radioChecked = document.querySelector(`input[name="${qid}"]:checked`);
       const imgElement = document.getElementById(qid + 'Img');
       const isPhotoSelected = imgElement && imgElement.src && imgElement.src.startsWith('data:image');
+      const versionInput = document.querySelector(`#${qid} input[type="text"]`);
+const isVersionMissing = radioChecked && radioChecked.value === "Yes" && versionInput && !versionInput.value.trim();
+
+if (versionInput) {
+  versionInput.style.border = isVersionMissing ? "2px solid red" : "";
+}
       
       // --- Date Validation Logic ---
       const dateInputs = document.querySelectorAll(`#${qid} input[type="date"]`);
@@ -363,20 +369,34 @@ for (let i = 1; i <= 18; i++) {
         qText.style.color = "red"; 
         if (!firstErrorField) firstErrorField = qText;
       } 
+    else if (isVersionMissing) {
+    qText.style.color = "red";
+    if (!qText.innerText.includes(currentMessages.version))
+        qText.innerText += " (" + currentMessages.version + ")";
+    if (!firstErrorField) firstErrorField = qText;
+}
       else if (radioChecked.value === "Yes" && !isPhotoSelected) {
-        qText.style.color = "red";
-        if (!qText.innerText.includes("(PHOTO MISSING!)")) qText.innerText += " (PHOTO MISSING!)";
-        if (!firstErrorField) firstErrorField = qText;
-      }
-      else if (isDateInvalid) {
-        qText.style.color = "red";
-        if (!qText.innerText.includes("(INVALID DATE!)")) qText.innerText += " (INVALID DATE!)";
-        if (!firstErrorField) firstErrorField = qText;
-      }
-      else {
-        qText.style.color = ""; 
-        qText.innerText = qText.innerText.replace(" (PHOTO MISSING!)", "").replace(" (INVALID DATE!)", "");
-      }
+  qText.style.color = "red";
+  const msg = currentMessages.photo || "PHOTO REQUIRED!";
+  if (!qText.innerText.includes(msg)) qText.innerText += " (" + msg + ")";
+  if (!firstErrorField) firstErrorField = qText;
+}
+else if (isDateInvalid) {
+  qText.style.color = "red";
+  const msg = currentMessages.date || "INVALID DATE!";
+  if (!qText.innerText.includes(msg)) qText.innerText += " (" + msg + ")";
+  if (!firstErrorField) firstErrorField = qText;
+}
+else {
+  qText.style.color = "";
+  const pm = currentMessages.photo || "PHOTO REQUIRED!";
+  const id = currentMessages.date || "INVALID DATE!";
+  const ver = currentMessages.version || "Please enter Version No!";
+  qText.innerText = qText.innerText
+    .replace(" (" + pm + ")", "")
+    .replace(" (" + id + ")", "")
+    .replace(" (" + ver + ")", "");
+}
     }
   }
   if (firstErrorField) {
@@ -615,6 +635,7 @@ function applyLanguage(){
     back: "पीछे जाएं / Back",
      photo: "फोटो अपलोड करें। / UPLOAD PHOTO!",
      date: "Date ठीक करें / WRONG DATE!",
+     version: "कृपया Version No भरें / Please enter Version No!",
      pending: "कृपया सारी जानकारी भरें (लाल रंग में हाईलाइट किया गया)। / fill all details (highlighted in red).",
      success: "Report सबमिट हो गया है! / Report Submitted successfully.",
      wait: "कृपया प्रतीक्षा करें, डेटा भेजा जा रहा है…",
@@ -625,6 +646,7 @@ function applyLanguage(){
     back: "మునుపటి పేజీకి వెళ్ళండి / Back",
      photo: "ఫోటోను అప్‌లోడ్ చేయండి / UPLOAD PHOTO!",
      date: "తేదీని నిర్ణయించండి / INVALID DATE!",
+     version: "దయచేసి version no ని నమోదు చేయండి / Please enter Version No!",
      pending: "దయచేసి అన్ని వివరాలను పూరించండి (ఎరుపు రంగులో హైలైట్ చేయబడింది). / Please fill all details (highlighted in red).",
      success: "నివేదిక విజయవంతంగా సమర్పించబడింది. / Report Submitted successfully.",
      wait: "దయచేసి వేచి ఉండండి, డేటా పంపబడుతోంది…",
@@ -635,16 +657,18 @@ function applyLanguage(){
     back: "முந்தைய பக்கத்திற்கு செல்லவும் / Back",
      photo: "புகைப்படத்தை பதிவேற்றவும் / UPLOAD PHOTO!",
      date: "தேதியை நிர்ணயிக்கவும் / INVALID DATE!",
+     version: "version no ஐ உள்ளிடவும். / Please enter Version No!",
      pending: "தயவுசெய்து அனைத்து விவரங்களையும் நிரப்பவும் (சிவப்பு நிறத்தில் சிறப்பிக்கப்பட்டுள்ளது). / Please fill all details (highlighted in red).",
-     success: "அறிக்கை வெற்றிகரமாக சமர்ப்பிக்கப்பட்டது.. / Report Submitted successfully.",
+     success: "அறிக்கை வெற்றிகரமாக சமர்ப்பிக்கப்பட்டது./ Report Submitted successfully.",
      wait: "தயவுசெய்து காத்திருக்கவும், தரவு அனுப்பப்படுகிறது…",
    },
    kn: {
      y: "ಹೌದು / Yes", n: "ಇಲ್ಲ / No",
        next: "ಉಳಿಸಿ ಮತ್ತು ಮುಂದುವರೆಯಿರಿ / Save & Next",
-    back: "पಹಿಂದಿನ ಪುಟಕ್ಕೆ ಹೋಗಿ / Back",
+    back: "ಹಿಂದಿನ ಪುಟಕ್ಕೆ ಹೋಗಿ / Back",
      photo: "ಫೋಟೋ ಅಪ್ಲೋಡ್ / UPLOAD PHOTO!",
      date: "ದಿನಾಂಕವನ್ನು ನಿಗದಿಪಡಿಸಿ / INVALID DATE!",
+     version: "ದಯವಿಟ್ಟು version no ನಮೂದಿಸಿ / Please enter Version No!",
      pending: "ದಯವಿಟ್ಟು ಎಲ್ಲಾ ವಿವರಗಳನ್ನು ಭರ್ತಿ ಮಾಡಿ (ಕೆಂಪು ಬಣ್ಣದಲ್ಲಿ ಹೈಲೈಟ್ ಮಾಡಲಾಗಿದೆ). / Please fill all details (highlighted in red).",
      success: "ವರದಿಯನ್ನು ಯಶಸ್ವಿಯಾಗಿ ಸಲ್ಲಿಸಲಾಗಿದೆ. / Report Submitted successfully.",
      wait: "ದಯವಿಟ್ಟು ಕಾಯಿರಿ, ಡೇಟಾ ಕಳುಹಿಸಲಾಗುತ್ತಿದೆ…",
@@ -716,6 +740,7 @@ function showPreview(event, imgId) {
   
 </body>
 </html>
+
 
 
 
