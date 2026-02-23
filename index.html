@@ -212,6 +212,8 @@ function questionBlock(qid){
     Submit and move to next page
   </button>
 </div>
+</div>
+
 
 <div id="page2" class="form-page">
   <h3>Page 2</h3>
@@ -270,30 +272,29 @@ function questionBlock(qid){
 
   <!-- Q24 -->
   <p id="q24Text"></p>
-  <label><input type="radio" name="q24" value="Yes" onclick="toggle('q24Div',true)"> <span class="yesText">Yes</span></label>
-  <label><input type="radio" name="q24" value="No" onclick="toggle('q24Div',false)"> <span class="noText">No</span></label>
-  <div id="q24Div" class="hidden">
-    <input type="file" accept="image/*" onchange="showPreview(event,'q24Img')">
-    <br><img id="q24Img" class="preview-img">
-  </div>
-  <hr>
+<label><input type="radio" name="q24" value="Yes" onclick="toggle('q24Div',true)"> <span class="yesText">Yes</span></label>
+<label><input type="radio" name="q24" value="No" onclick="toggle('q24Div',false)"> <span class="noText">No</span></label>
+<div id="q24Div" class="hidden">
+    <div id="q24Photos" style="margin-bottom:10px;"></div>
+    <button type="button" id="btn-add-q24" onclick="addMorePhoto('q24Photos')">+ Add more photo</button>
+</div>
+<hr>
 
   <!-- Q25 (Fire Extinguishers: count + N photos + N expiry dates) -->
-  <p id="q25Text"></p>
-  <label><input type="radio" name="q25" value="Yes" onclick="toggleFireExt(true)"> <span class="yesText">Yes</span></label>
-  <label><input type="radio" name="q25" value="No" onclick="toggleFireExt(false)"> <span class="noText">No</span></label>
+ <!-- Q25 (Fire Extinguishers: DIRECT COUNT + N photos + N expiry dates) -->
+<p id="q25Text"></p>
 
-  <div id="q25Div" class="hidden">
-    <div style="margin:8px 0;">
-      <label id="q25CountLabel">Select number of fire extinguishers (max 15):</label><br>
-      <select id="q25Count" onchange="renderFireExtinguishers(this.value)">
-        <option value="">--Select--</option>
-      </select>
-    </div>
-
-    <div id="q25Items"></div>
+<div id="q25Div">
+  <div style="margin:8px 0;">
+    <label id="q25CountLabel">Select number of valid fire extinguishers (min 1, max 15):</label><br>
+    <select id="q25Count" onchange="renderFireExtinguishers(this.value)">
+      <option value="">--Select--</option>
+    </select>
   </div>
-  <hr>
+
+  <div id="q25Items"></div>
+</div>
+<hr>
 
   <!-- Q26 -->
   <p id="q26Text"></p>
@@ -358,6 +359,22 @@ const totalPages = 6;
    let progressInterval;
 let currentProgress = 0;
 
+// ✅ ADDED: Page-wise question ranges
+const PAGE_RANGES = {
+  1: { start: 1, end: 18 },
+  2: { start: 19, end: 27 },
+};
+
+// ✅ ADDED: submissionId persist (same row update)
+let submissionId = localStorage.getItem("submissionId") || "";
+
+
+// ✅ ADDED: simple id generator
+function makeId() {
+  return "sid-" + Date.now() + "-" + Math.random().toString(16).slice(2);
+}
+
+
 function showOverlay() {
   document.getElementById("submitOverlay").classList.remove("hidden");
   // Dynamic wait message (English + Local)
@@ -413,102 +430,200 @@ async function submitAndNext(btn) {
   submitBtn.disabled = true;
   showOverlay();
 
-  // ================= VALIDATION CODE START (Yahan paste karein) =================
-  const requiredIds = ['state', 'branch', 'branchHead', 'officeBoy'];
-  let firstErrorField = null;
+// ================= FINAL VALIDATION (Q1 - Q27) =================
+const requiredIds = ['state', 'branch', 'branchHead', 'officeBoy'];
+let firstErrorField = null;
 
-  requiredIds.forEach(id => {
-    const el = document.getElementById(id);
-    if (!el.value.trim()) {
-      el.style.border = "2px solid red"; 
-      if (!firstErrorField) firstErrorField = el;
-    } else {
-      el.style.border = ""; 
-    }
-  });
-
-for (let i = 1; i <= 18; i++) {
-    const qid = 'q' + i;
-    const qText = document.getElementById(qid + 'Text');
-    const isVisible = qText && qText.offsetParent !== null;
-
-    if (isVisible) {
-      const radioChecked = document.querySelector(`input[name="${qid}"]:checked`);
-      const imgElement = document.getElementById(qid + 'Img');
-      const isPhotoSelected = imgElement && imgElement.src && imgElement.src.startsWith('data:image');
-      const versionInput = document.querySelector(`#${qid} input[type="text"]`);
-const isVersionMissing = radioChecked && radioChecked.value === "Yes" && versionInput && !versionInput.value.trim();
-
-if (versionInput) {
-  versionInput.style.border = isVersionMissing ? "2px solid red" : "";
+// ---------- HELPERS ----------
+function resetBorder(el) {
+  if (el) el.style.border = "";
 }
-      
-      // --- Date Validation Logic ---
-      const dateInputs = document.querySelectorAll(`#${qid} input[type="date"]`);
-      let isDateInvalid = false;
-      const currentYear = new Date().getFullYear();
+function setRedBorder(el) {
+  if (el) el.style.border = "2px solid red";
+}
 
-      dateInputs.forEach(input => {
-        if (input.value) {
-          const inputYear = new Date(input.value).getFullYear();
-          // 2000 se purani ya future ki bahut aage ki dates block karein
-          if (inputYear < 2019 || inputYear > 2026) {
-            isDateInvalid = true;
-            input.style.border = "2px solid red";
-          } else {
-            input.style.border = "";
+// Count images in a container safely (supports data:image, blob:, http(s))
+function countPreviewPhotos(containerId) {
+  const c = document.getElementById(containerId);
+  if (!c) return 0;
+
+  const imgs = Array.from(c.querySelectorAll("img"));
+  return imgs.filter(im => {
+    const src = (im && im.src) ? im.src.trim() : "";
+    return src.startsWith("data:image") || src.startsWith("blob:") || src.startsWith("http");
+  }).length;
+}
+
+// Border highlight for multi-photo container
+function markContainer(containerId, hasError) {
+  const c = document.getElementById(containerId);
+  if (!c) return;
+  c.style.border = hasError ? "2px solid red" : "";
+}
+
+// 1) Basic Details Validation
+requiredIds.forEach(id => {
+  const el = document.getElementById(id);
+  const val = el ? String(el.value || "").trim() : "";
+
+  if (!el || !val) {
+    if (el) setRedBorder(el);
+    if (!firstErrorField) firstErrorField = el;
+  } else {
+    resetBorder(el);
+  }
+});
+
+// 2) Questions Loop (current page only)
+const r = PAGE_RANGES[currentPage] || { start: 1, end: 18 };
+
+for (let i = r.start; i <= r.end; i++) {
+  const qid = 'q' + i;
+  const qText = document.getElementById(qid + 'Text');
+  if (!qText || qText.offsetParent === null) continue; // hidden skip
+
+  // Reset question text state
+  qText.style.color = "";
+  const originalText = qText.innerText.split(' (')[0];
+  qText.innerText = originalText;
+
+  let errorMsg = "";
+
+  // ============================================================
+  // CASE 1: Q25 (Fire Extinguisher) - Dropdown + N Photos + N Dates
+  // ============================================================
+  if (qid === "q25") {
+    const countEl = document.getElementById("q25Count");
+    const countVal = countEl?.value;
+
+    resetBorder(countEl);
+
+    if (!countVal) {
+      errorMsg = currentMessages.selectCount || "SELECT COUNT!";
+      setRedBorder(countEl);
+    } else {
+      const n = parseInt(countVal, 10);
+
+      for (let k = 1; k <= n; k++) {
+        const imgK = document.getElementById(`q25Img${k}`);
+        const expK = document.getElementById(`q25Exp${k}`);
+
+        const imgSrc = imgK?.src ? imgK.src.trim() : "";
+        const hasPhoto = imgSrc.startsWith("data:image") || imgSrc.startsWith("blob:") || imgSrc.startsWith("http");
+
+        const dateVal = expK ? expK.value : "";
+        const year = dateVal ? new Date(dateVal).getFullYear() : 0;
+        const isDateValid = (year >= 2019 && year <= 2028);
+
+        // Highlight date field
+        if (expK) expK.style.border = isDateValid ? "" : "2px solid red";
+
+        if (!hasPhoto || !isDateValid) {
+          errorMsg = "ALL PHOTOS & DATES (2019-2028) REQUIRED!";
+          break;
+        }
+      }
+    }
+  }
+
+  // ============================================================
+  // CASE 2: All other questions (Radio based)
+  // ============================================================
+  else {
+    const radio = document.querySelector(`input[name="${qid}"]:checked`);
+
+    // (A) Radio mandatory
+    if (!radio) {
+      errorMsg = "SELECTION REQUIRED!";
+    }
+
+    // (B) If "Yes" then additional validations
+    else if (radio.value === "Yes") {
+
+      // Policy Details: Q3 - Q10
+      if (i >= 3 && i <= 10) {
+        const vInput = document.querySelector(`#${qid} input.detail-input:nth-of-type(1)`);
+        const iInput = document.querySelector(`#${qid} input.detail-input:nth-of-type(2)`);
+        const eInput = document.querySelector(`#${qid} input.detail-input:nth-of-type(3)`);
+
+        resetBorder(vInput);
+        resetBorder(iInput);
+        resetBorder(eInput);
+
+        const version = vInput?.value ? vInput.value.trim() : "";
+        const iYear = iInput?.value ? new Date(iInput.value).getFullYear() : 0;
+        const eYear = eInput?.value ? new Date(eInput.value).getFullYear() : 0;
+
+        const iValid = (iYear >= 2019 && iYear <= 2028);
+        const eValid = (eYear >= 2019 && eYear <= 2028);
+
+        if (!version || !iValid || !eValid) {
+          errorMsg = "VERSION & DATES (2019-2028) REQUIRED!";
+          if (!version) setRedBorder(vInput);
+          if (!iValid) setRedBorder(iInput);
+          if (!eValid) setRedBorder(eInput);
+        }
+      }
+
+      // Multi-Photo: Q21, Q24
+      if (!errorMsg && (qid === "q21" || qid === "q24")) {
+        const containerId = qid + "Photos";
+        markContainer(containerId, false);
+
+        const photoCount = countPreviewPhotos(containerId);
+
+        if (photoCount === 0) {
+          errorMsg = "MIN 1 PHOTO REQUIRED!";
+          markContainer(containerId, true);
+        } else if (photoCount > 5) {
+          errorMsg = "MAX 5 PHOTOS ALLOWED!";
+          markContainer(containerId, true);
+        }
+      }
+
+      // Standard Single Photo (exclude Q21/Q24/Q25 to avoid conflict)
+      if (!errorMsg && qid !== "q21" && qid !== "q24" && qid !== "q25") {
+        const img = document.getElementById(qid + 'Img');
+
+        // If img element doesn't exist, don't throw photo error here
+        if (img) {
+          const src = img.src ? img.src.trim() : "";
+          const hasPhoto = src.startsWith("data:image") || src.startsWith("blob:") || src.startsWith("http");
+
+          if (!hasPhoto) {
+            errorMsg = currentMessages.photo || "PHOTO REQUIRED!";
           }
         }
-      });
-
-      // --- Main Checks ---
-      if (!radioChecked) {
-        qText.style.color = "red"; 
-        if (!firstErrorField) firstErrorField = qText;
-      } 
-    else if (isVersionMissing) {
-    qText.style.color = "red";
-    if (!qText.innerText.includes(currentMessages.version))
-        qText.innerText += " (" + currentMessages.version + ")";
-    if (!firstErrorField) firstErrorField = qText;
-}
-      else if (radioChecked.value === "Yes" && !isPhotoSelected) {
-  qText.style.color = "red";
-  const msg = currentMessages.photo || "PHOTO REQUIRED!";
-  if (!qText.innerText.includes(msg)) qText.innerText += " (" + msg + ")";
-  if (!firstErrorField) firstErrorField = qText;
-}
-else if (isDateInvalid) {
-  qText.style.color = "red";
-  const msg = currentMessages.date || "INVALID DATE!";
-  if (!qText.innerText.includes(msg)) qText.innerText += " (" + msg + ")";
-  if (!firstErrorField) firstErrorField = qText;
-}
-else {
-  qText.style.color = "";
-  const pm = currentMessages.photo || "PHOTO REQUIRED!";
-  const id = currentMessages.date || "INVALID DATE!";
-  const ver = currentMessages.version || "Please enter Version No!";
-  qText.innerText = qText.innerText
-    .replace(" (" + pm + ")", "")
-    .replace(" (" + id + ")", "")
-    .replace(" (" + ver + ")", "");
-}
+      }
     }
   }
-  if (firstErrorField) {
-    firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    alert("Kripya saari jankari bharein (Red highlighted).");
-    submitBtn.innerText = (currentMessages?.next || "Submit and move to next page");
-    submitBtn.disabled = false;
-    hideOverlay();
-    return false;
+
+  // Apply Error UI for this question
+  if (errorMsg) {
+    qText.style.color = "red";
+    qText.innerText = originalText + " (" + errorMsg + ")";
+    if (!firstErrorField) firstErrorField = qText;
   }
-  // ================= VALIDATION CODE END =================
+}
+
+// Final Decision
+if (firstErrorField) {
+  firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  alert(currentMessages.pending || "Please correct the highlighted fields.");
+  submitBtn.innerText = (currentMessages?.next || "Submit and move to next page");
+  submitBtn.disabled = false;
+  hideOverlay();
+  return false;
+}
+// ================= VALIDATION END =================
 
   // Iske niche aapka purana auditData collection wala logic rahega...
   
   const auditData = {
+    // ✅ ADDED
+    submissionId: submissionId || "",
+    pageNo: currentPage,
+    isFinal: (currentPage === totalPages),
     state: document.getElementById('state').value,
     branch: document.getElementById('branch').value,
     branchHead: document.getElementById('branchHead').value,
@@ -516,10 +631,64 @@ else {
     responses: {}
   };
 
-  for (let i = 1; i <= 18; i++) {
+  // ✅ IMPORTANT: Page 1 submit = NEW audit = NEW submissionId (new row)
+if (currentPage === 1) {
+  submissionId = makeId();
+  localStorage.setItem("submissionId", submissionId);
+  auditData.submissionId = submissionId;
+} else if (!submissionId) {
+  // safety fallback (agar kisi reason se id missing ho)
+  submissionId = makeId();
+  localStorage.setItem("submissionId", submissionId);
+  auditData.submissionId = submissionId;
+}
+
+
+  // ✅ CHANGED: collect only current page questions
+  const r2 = PAGE_RANGES[currentPage] || { start: 1, end: 18 };
+  for (let i = r2.start; i <= r2.end; i++) {
     let qid = 'q' + i;
     let radio = document.querySelector(`input[name="${qid}"]:checked`);
     let img = document.getElementById(qid + 'Img');
+
+ // ✅ ADDED: Q21 multi-photo data
+if (qid === "q21") {
+  const wrap = document.getElementById("q21Photos");
+  const imgs = wrap ? wrap.querySelectorAll("img.preview-img") : [];
+  const photos = Array.from(imgs)
+    .map(im => im.src)
+    .filter(src => src && src.startsWith("data:image"));
+
+  auditData.responses[qid] = {
+    answer: radio ? radio.value : "",
+    photos
+  };
+  continue;
+}
+
+    /// ✅ ADDED: Q25 extinguisher data
+if (qid === "q25") {
+  const count = document.getElementById("q25Count")?.value || "";
+  const n = parseInt(count || "0", 10);
+  const photos = [];
+  const expiryDates = [];
+
+  for (let k = 1; k <= n; k++) {
+    const imgK = document.getElementById("q25Img" + k);
+    const expK = document.getElementById("q25Exp" + k);
+
+    photos.push(imgK && imgK.src && imgK.src.startsWith("data:image") ? imgK.src : "");
+    expiryDates.push(expK ? expK.value : "");
+  }
+
+  auditData.responses[qid] = {
+    answer: count,          // ✅ IMPORTANT: number ko answer me save
+    count,                 // optional but ok
+    photos,
+    expiryDates
+  };
+  continue;
+}
 
     auditData.responses[qid] = {
       answer: radio ? radio.value : "",
@@ -530,7 +699,7 @@ else {
     };
   }
 
-  const webhookURL = "https://script.google.com/macros/s/AKfycbxJcJxRR3pJbdPw3OszNyWZaMvsafNIyzp_Hp-olnMzarBZLgeQHhwA49h9S3prPeoY/exec";
+  const webhookURL = "https://script.google.com/macros/s/AKfycbzC2pBNt_QgxTRR40C6w2h0qiiWSQVdLEnI1CiwgO4a70nZn3Kh_-pBairw_7ga8oQM/exec";
 
   try {
     const response = await fetch(webhookURL, {
@@ -568,6 +737,12 @@ setTimeout(() => {
 
 }, 800);
 
+  // ✅ ADDED: clear submissionId on final submit
+  if (auditData.isFinal) {
+    localStorage.removeItem("submissionId");
+    submissionId = "";
+  }
+
 return true;
     
   } catch (err) {
@@ -587,6 +762,101 @@ return true;
 function toggle(id,show){
  document.getElementById(id).style.display = show ? "block" : "none";
 }
+
+
+// ✅ ADDED: Q21 Multi-photo helpers
+function addMorePhoto(containerId){
+  const wrap = document.getElementById(containerId);
+  const div = document.createElement("div");
+  div.style.marginBottom = "10px";
+
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+
+  const img = document.createElement("img");
+  img.className = "preview-img";
+  img.style.display = "none";
+
+  input.onchange = (e)=> {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev)=>{
+      img.src = ev.target.result;
+      img.style.display = "block";
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeBtn = document.createElement("button");
+  removeBtn.type = "button";
+  removeBtn.innerText = "✖";
+  removeBtn.style.marginLeft = "10px";
+  removeBtn.onclick = ()=> div.remove();
+
+  div.appendChild(input);
+  div.appendChild(removeBtn);
+  div.appendChild(document.createElement("br"));
+  div.appendChild(img);
+  wrap.appendChild(div);
+}
+
+function hasAnyPhotoInContainer(containerId){
+  const wrap = document.getElementById(containerId);
+  if(!wrap) return false;
+  const imgs = wrap.querySelectorAll("img.preview-img");
+  return Array.from(imgs).some(im => im.src && im.src.startsWith("data:image"));
+}
+
+// ✅ ADDED: auto 1 photo input for Q21
+document.addEventListener("DOMContentLoaded", () => {
+  // ✅ Q21: auto 1 photo input
+  const w = document.getElementById("q21Photos");
+  if (w && w.children.length === 0) addMorePhoto("q21Photos");
+
+  // ✅ Q25: dropdown options 1..15 fill
+  initQ25CountOptions();
+});
+
+// ✅ Q25: Fill dropdown 1..15 (run once)
+function initQ25CountOptions(){
+  const sel = document.getElementById("q25Count");
+  if(!sel) return;
+
+  if (sel.options.length > 1) return;
+
+  for(let i=1;i<=15;i++){
+    const o = document.createElement("option");
+    o.value = String(i);
+    o.text = String(i);
+    sel.add(o);
+  }
+}
+
+function renderFireExtinguishers(n){
+  const wrap = document.getElementById("q25Items");
+  if (!wrap) return;
+  wrap.innerHTML = "";
+  const count = parseInt(n || "0", 10);
+  if(!count) return;
+
+  for(let i=1;i<=count;i++){
+    wrap.insertAdjacentHTML("beforeend", `
+      <div style="border:1px solid #ddd;padding:10px;margin:10px 0;">
+        <b>Fire Extinguisher ${i}</b><br><br>
+        <label>Expiry / Servicing Validity Date</label><br>
+        <input type="date" id="q25Exp${i}"><br><br>
+
+        <input type="file" accept="image/*" onchange="showPreview(event,'q25Img${i}')"><br>
+        <img id="q25Img${i}" class="preview-img">
+      </div>
+    `);
+  }
+}
+
+
+
 
 const branchMap={
 "Andhra Pradesh":["Tirupati","Vijayawada","Visakhapatnam"],
@@ -612,18 +882,28 @@ const trade=["Bhubaneswar","Hyderabad","Kolkata","Puducherry","Tirupati"];
 const iso=["Bangalore","Chennai","Delhi","Hyderabad","Jaipur","Pune","Kolkata","Coimbatore","Ahmedabad"];
 
 function loadBranches(){
-branch.innerHTML="";
-(branchMap[state.value]||[]).forEach(b=>{
-let o=document.createElement("option");
-o.text=o.value=b;
-branch.add(o);
-});
-checkConditions();
+  const stateEl = document.getElementById("state");
+  const branchEl = document.getElementById("branch");
+  if (!stateEl || !branchEl) return;
+
+  branchEl.innerHTML = "";
+  (branchMap[stateEl.value] || []).forEach(b => {
+    const o = document.createElement("option");
+    o.text = o.value = b;
+    branchEl.add(o);
+  });
+
+  checkConditions();
 }
 
 function checkConditions(){
-tradeSection.style.display = trade.includes(branch.value) ? "block" : "none";
-isoSection.style.display = iso.includes(branch.value) ? "block" : "none";
+  const branchEl = document.getElementById("branch");
+  const tradeSectionEl = document.getElementById("tradeSection");
+  const isoSectionEl = document.getElementById("isoSection");
+  if (!branchEl) return;
+
+  if (tradeSectionEl) tradeSectionEl.style.display = trade.includes(branchEl.value) ? "block" : "none";
+  if (isoSectionEl) isoSectionEl.style.display = iso.includes(branchEl.value) ? "block" : "none";
 }
 </script>
 
@@ -700,7 +980,53 @@ kn:"ಸೂಚನಾ ಫಲಕದಲ್ಲಿ  Trade License ಎಂದು ಪ್�
 q18:{hi:"क्या ISO certificate  Notice बोर्ड पर प्रदर्शित है?/Is ISO certificate on the notice Board?",
 te:"నోటీసు బోర్డులో  ISO certificate   ప్రదర్శించబడిందా?/Is ISO certificate on the notice Board?",
 ta:"அறிவிப்பு பலகையில் ISO certificate  காட்டப்பட்டுள்ளதா?/Is ISO certificate on the notice Board?",
-kn:"ಸೂಚನಾ ಫಲಕದಲ್ಲಿ  ISO certificate ಎಂದು ಪ್ರದರ್ಶಿಸಲಾಗಿದೆಯೇ?/Is ISO certificate on the notice Board?"}
+kn:"ಸೂಚನಾ ಫಲಕದಲ್ಲಿ  ISO certificate ಎಂದು ಪ್ರದರ್ಶಿಸಲಾಗಿದೆಯೇ?/Is ISO certificate on the notice Board?"},
+
+q19:{hi:"क्या Abstracts & Notices लगे हैं?/Abstracts & Notices?",
+te:"Abstracts & Notices ఉన్నాయా?/Abstracts & Notices?",
+ta:"Abstracts & Notices உள்ளதா?/Abstracts & Notices?",
+kn:"Abstracts & Notices ಇದೆಯೇ?/Abstracts & Notices?"},
+
+q20:{hi:"क्या Office Address Board लगा है?/Office Address Board?",
+te:"Office Address Board ఉందా?/Office Address Board?",
+ta:"Office Address Board உள்ளதா?/Office Address Board?",
+kn:"Office Address Board ಇದೆಯೇ?/Office Address Board?"},
+
+q21:{hi:"क्या First Aid Box उपलब्ध है (expiry check)?/First Aid Box (check expiry)?",
+te:"First Aid Box ఉందా (expiry check)?/First Aid Box (check expiry)?",
+ta:"First Aid Box உள்ளதா (expiry check)?/First Aid Box (check expiry)?",
+kn:"First Aid Box ಇದೆಯೇ (expiry check)?/First Aid Box (check expiry)?"},
+
+q22:{hi:"क्या ERT List उपलब्ध है?/ERT List?",
+te:"ERT List ఉందా?/ERT List?",
+ta:"ERT List உள்ளதா?/ERT List?",
+kn:"ERT List ಇದೆಯೇ?/ERT List?"},
+
+q23:{hi:"क्या Emergency contact list उपलब्ध है (Doctor/Hospital/Police/Fire/Ambulance)?/Emergency contact list?",
+te:"Emergency contact list ఉందా?/Emergency contact list?",
+ta:"Emergency contact list உள்ளதா?/Emergency contact list?",
+kn:"Emergency contact list ಇದೆಯೇ?/Emergency contact list?"},
+
+q24:{hi:"क्या Fire Exit Signages लगे हैं?/Fire Exit Signages?",
+te:"Fire Exit Signages ఉన్నాయా?/Fire Exit Signages?",
+ta:"Fire Exit Signages உள்ளதா?/Fire Exit Signages?",
+kn:"Fire Exit Signages ಇದೆಯೇ?/Fire Exit Signages?"},
+
+q25:{hi:"Branch में कितने Fire Extinguishers उपलब्ध हैं?/Number of Fire Extinguishers in branch?",
+te:"Branch లో ఎంతమంది Fire Extinguishers ఉన్నాయి?/Number of Fire Extinguishers in branch?",
+ta:"Branch-ல் எத்தனை Fire Extinguishers உள்ளன?/Number of Fire Extinguishers in branch?",
+kn:"Branch ನಲ್ಲಿ ಎಷ್ಟು Fire Extinguishers ಇವೆ?/Number of Fire Extinguishers in branch?"},
+
+q26:{hi:"क्या UPS On/Off Instructions लगी हैं?/UPS On/Off Instructions near location?",
+te:"UPS On/Off Instructions ఉన్నాయా?/UPS On/Off Instructions near location?",
+ta:"UPS On/Off Instructions உள்ளதா?/UPS On/Off Instructions near location?",
+kn:"UPS On/Off Instructions ಇದೆಯೇ?/UPS On/Off Instructions near location?"},
+
+q27:{hi:"क्या Electrical On/Off Instructions लगी हैं?/Electrical On/Off Instructions near location?",
+te:"Electrical On/Off Instructions ఉన్నాయా?/Electrical On/Off Instructions near location?",
+ta:"Electrical On/Off Instructions உள்ளதా?/Electrical On/Off Instructions near location?",
+kn:"Electrical On/Off Instructions ಇದೆಯೇ?/Electrical On/Off Instructions near location?"},
+
 };
 
 const STATE_LANG={
@@ -716,7 +1042,8 @@ const STATE_LANG={
 let currentMessages = {}; 
 
 function applyLanguage(){
- const lang = state.value === "" ? "hi" : (STATE_LANG[state.value] || "hi");
+ const stateEl = document.getElementById("state");
+const lang = (!stateEl || stateEl.value === "") ? "hi" : (STATE_LANG[stateEl.value] || "hi");
  
  // 1. Sawaal translate karein
  Object.keys(QUESTIONS).forEach(q=>{
@@ -733,6 +1060,9 @@ function applyLanguage(){
      photo: "फोटो अपलोड करें। / UPLOAD PHOTO!",
      date: "Date ठीक करें / WRONG DATE!",
      version: "कृपया Version No भरें / Please enter Version No!",
+     // ✅ ADDED
+     firstAidTip: "सारी दवाइयाँ एक साथ रखें ताकि सभी expiry dates दिखें, फिर फोटो क्लिक करें। / Arrange all the medicines next to each other so expiry date of all medicines is visible and then click the photo.",
+     selectCount: "कृपया Fire Extinguisher की संख्या चुनें (max 15). / Please select number of Fire Extinguishers (max 15).",
      pending: "कृपया सारी जानकारी भरें (लाल रंग में हाईलाइट किया गया)। / fill all details (highlighted in red).",
      success: "Report सबमिट हो गया है! / Report Submitted successfully.",
      wait: "कृपया प्रतीक्षा करें, डेटा भेजा जा रहा है…",
@@ -788,6 +1118,13 @@ document.querySelectorAll(".btn-next").forEach(b =>
  
  const btnLabel = document.getElementById("btnText");
  if(btnLabel) btnLabel.innerText = currentMessages.submit;
+
+ // ✅ ADDED: Page2 tip + label translation
+ const tip = document.getElementById("q21Tip");
+ if (tip) tip.innerText = currentMessages.firstAidTip || "";
+
+ const cLab = document.getElementById("q25CountLabel");
+ if (cLab) cLab.innerText = currentMessages.selectCount || cLab.innerText;
 }
   
   // Photo preview dikhane ke liye ye function zaroori hai
@@ -817,6 +1154,11 @@ function showPreview(event, imgId) {
     reader.readAsDataURL(file);
   }
 }
+// ✅ INITIAL LOAD FIX
+document.addEventListener("DOMContentLoaded", function () {
+  loadBranches();
+  applyLanguage();
+});
 </script>
   <!-- SUBMIT LOADING OVERLAY -->
 <div id="submitOverlay" class="hidden">
@@ -837,35 +1179,3 @@ function showPreview(event, imgId) {
   
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
