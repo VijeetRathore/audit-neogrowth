@@ -2100,10 +2100,9 @@ async function onSubmitNext(){
   try{
     const payload = buildPayload(currentPage);
     const res = await fetch(APPS_SCRIPT_URL, {
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify(payload),
-    });
+  method: "POST",
+  body: JSON.stringify(payload), // text/plain by default => no preflight
+});
     const data = await res.json().catch(()=> ({}));
 
     if(data && data.submissionId){
@@ -2175,6 +2174,7 @@ function resetAll(){
 
 </body>
 </html>
+
 
 
 
