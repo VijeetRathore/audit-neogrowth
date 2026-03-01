@@ -1176,8 +1176,21 @@ function renderThumbs(qid, key, dataUrls){
 function getStore(){
   try{ return JSON.parse(localStorage.getItem("draft")||"{}"); }catch(e){ return {}; }
 }
-function setStore(obj){
-  localStorage.setItem("draft", JSON.stringify(obj||{}));
+function setStore(store){
+
+  // Clone object so original store untouched rahe
+  const clean = JSON.parse(JSON.stringify(store || {}));
+
+  // Remove photos before saving to localStorage
+  if (clean.responses) {
+    Object.keys(clean.responses).forEach(qid => {
+      if (clean.responses[qid]) {
+        delete clean.responses[qid].photos;
+      }
+    });
+  }
+
+  localStorage.setItem("draft", JSON.stringify(clean));
 }
 
 /* ---- question renderers ---- */
@@ -2216,6 +2229,7 @@ function resetAll(){
 
 </body>
 </html>
+
 
 
 
