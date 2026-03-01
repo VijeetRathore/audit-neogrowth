@@ -1,987 +1,724 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Branch Audit</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title></title>
 
-<style>
-body{font-family:Arial;padding:20px}
-.section{border:1px solid #aaa;padding:15px;margin-top:20px}
-.hidden{display:none}
-label{font-weight:bold}
-hr{margin:15px 0}
-  
-.preview-img {
-  width: 100px;
-  height: 100px;
-  object-fit: cover;
-  margin-top: 10px;
-  border: 1px solid #ddd;
-  display: none; /* Shuruat mein hidden rahega */
-}
-/* multi-page */
-.form-page{display:none}
-.form-page.active{display:block}
-.navbar{display:flex;gap:10px;margin-top:20px}
-.navbar button{padding:10px 14px;cursor:pointer}
-/* ===== SUCCESS TOAST ===== */
-.toast{
-  position:fixed;
-  bottom:30px;
-  left:50%;
-  transform:translateX(-50%);
-  background:#28a745;
-  color:white;
-  padding:14px 22px;
-  border-radius:8px;
-  font-size:16px;
-  box-shadow:0 4px 10px rgba(0,0,0,0.3);
-  z-index:9999;
-  opacity:0;
-  transition:opacity 0.4s ease;
-}
-.toast.show{
-  opacity:1;
-}
-.hidden{
-  display:none;
-}
-
-/* ===== LOADING OVERLAY ===== */
-#submitOverlay{
-  position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
-  background:rgba(0,0,0,0.6);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  z-index:9998;
-}
-  #submitOverlay.hidden { display: none !important; }
-
-.overlay-box{
-  background:white;
-  padding:30px;
-  border-radius:10px;
-  text-align:center;
-  width:300px;
-}
-
-.progress-bar{
-  width:100%;
-  height:12px;
-  background:#ddd;
-  border-radius:10px;
-  overflow:hidden;
-  margin-top:15px;
-}
-
-.progress-fill{
-  height:100%;
-  width:0%;
-  background:#007bff;
-  transition:width 0.3s ease;
-}
-  
-</style>
+  <style>
+    :root{
+      --bg:#0b1220; --card:#121a2b; --muted:#8aa0c2; --text:#e6eefc;
+      --accent:#4aa3ff; --danger:#ff4d4f; --ok:#22c55e;
+      --border:rgba(255,255,255,.10);
+    }
+    body{ margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:var(--bg); color:var(--text); }
+    .wrap{ max-width:980px; margin:0 auto; padding:14px; }
+    .card{ background:var(--card); border:1px solid var(--border); border-radius:14px; padding:14px; }
+    .row{ display:flex; gap:12px; flex-wrap:wrap; }
+    .col{ flex:1 1 260px; min-width:260px; }
+    .label{ font-size:13px; color:var(--muted); margin:8px 0 6px; }
+    select,input[type="text"],input[type="number"],input[type="date"]{
+      width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--border);
+      background:rgba(255,255,255,.04); color:var(--text); outline:none;
+    }
+    input::placeholder{ color:rgba(230,238,252,.45); }
+    .pages{ margin-top:12px; }
+    .form-page{ display:none; }
+    .form-page.active{ display:block; }
+    .q{ border:1px solid var(--border); border-radius:14px; padding:12px; margin:12px 0; background:rgba(255,255,255,.02); }
+    .q.err{ border-color:rgba(255,77,79,.75); box-shadow:0 0 0 2px rgba(255,77,79,.12) inset; }
+    .q-title{ font-weight:600; line-height:1.35; }
+    .q-sub{ font-size:12px; color:var(--muted); margin-top:4px; }
+    .radios{ display:flex; gap:12px; margin-top:10px; flex-wrap:wrap; }
+    .chip{
+      display:flex; align-items:center; gap:8px; padding:8px 10px;
+      border-radius:999px; border:1px solid var(--border); background:rgba(255,255,255,.03);
+    }
+    .chip input{ transform:scale(1.1); }
+    .inline{ display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+    .inline .mini{ flex:1 1 180px; min-width:180px; }
+    .hint{ font-size:12px; color:var(--muted); margin-top:8px; }
+    .err-msg{ font-size:12px; color:rgba(255,77,79,.95); margin-top:8px; min-height:16px; }
+    .btnbar{
+      display:flex; justify-content:space-between; gap:12px; margin-top:14px;
+      position:sticky; bottom:10px; padding:10px; background:linear-gradient(180deg, rgba(11,18,32,0), rgba(11,18,32,.85));
+      backdrop-filter: blur(6px);
+    }
+    button{
+      border:1px solid var(--border); border-radius:14px; padding:12px 14px;
+      background:rgba(255,255,255,.04); color:var(--text); font-weight:600;
+      flex:1; cursor:pointer;
+    }
+    button.primary{ background:rgba(74,163,255,.18); border-color:rgba(74,163,255,.35); }
+    button:disabled{ opacity:.6; cursor:not-allowed; }
+    .thumbs{ display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+    .thumb{
+      width:84px; height:84px; border-radius:12px; border:1px solid var(--border);
+      background-size:cover; background-position:center; position:relative; overflow:hidden;
+    }
+    .x{
+      position:absolute; top:6px; right:6px; width:26px; height:26px; border-radius:999px;
+      border:1px solid var(--border); background:rgba(0,0,0,.35); color:var(--text);
+      display:grid; place-items:center; font-weight:800; line-height:1; cursor:pointer;
+    }
+    .overlay{
+      position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+      background:rgba(0,0,0,.55); padding:14px;
+    }
+    .overlay.show{ display:flex; }
+    .modal{ max-width:420px; width:100%; background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px; }
+    .modal h3{ margin:0 0 8px; }
+    .modal p{ margin:0; color:var(--muted); }
+    .assetRow{ display:flex; gap:10px; flex-wrap:wrap; align-items:flex-start; }
+    .assetName{ flex:1 1 260px; min-width:260px; }
+  </style>
 </head>
 
 <body>
-
-<h2>Branch Compliance Audit</h2>
-<!-- ====== MULTI-PAGE WRAPPER START ====== -->
-<div id="page1" class="form-page active">
-  <h3>Page 1</h3>  
-
-<!-- ================= BASIC DETAILS ================= -->
-
-<label>Select State</label><br>
-<select id="state" onchange="loadBranches();applyLanguage()">
-<option value="">--Select--</option>
-<option value="Andhra Pradesh">ఆంధ్రప్రదేశ్ / Andhra Pradesh</option>
-<option value="Telangana">తెలంగాణ / Telangana</option>
-<option value="Tamil Nadu">தமிழ்நாடு / Tamil Nadu</option>
-<option value="Karnataka">ಕರ್ನಾಟಕ / Karnataka</option>
-<option value="Delhi">दिल्ली / Delhi</option>
-<option value="Gujarat">गुजरात / Gujarat</option>
-<option value="Maharashtra">महाराष्ट्र / Maharashtra</option>
-<option value="Rajasthan">राजस्थान / Rajasthan</option>
-<option value="Uttar Pradesh">उत्तर प्रदेश / Uttar Pradesh</option>
-<option value="West Bengal">পশ্চিমবঙ্গ / West Bengal</option>
-<option value="Punjab">ਪੰਜਾਬ / Punjab</option>
-<option value="Haryana">हरियाणा / Haryana</option>
-<option value="Madhya Pradesh">मध्य प्रदेश / Madhya Pradesh</option>
-<option value="Odisha">ଓଡ଼ିଶା / Odisha</option>
-<option value="Puducherry">புதுச்சேரி / Puducherry</option>
-<option value="Jharkhand">झारखंड / Jharkhand</option>
-<option value="Chandigarh">चंडीगढ़ / Chandigarh</option>
-</select>
-
-<br><br>
-
-<label>Select Branch</label><br>
-<select id="branch" onchange="checkConditions()"></select>
-
-<br><br>
-
-<label>Name of Branch Head</label><br>
-<input type="text" id="branchHead">
-
-<br><br>
-
-<label>Name of Office Boy</label><br>
-<input type="text" id="officeBoy">
-
-<!-- ================= COMPLIANCE ================= -->
-
-<div class="section">
-<h3>Compliance</h3>
-
-<script>
-function questionBlock(qid){
-  let isSimple = (qid === "q1" || qid === "q2");
-
-  document.write(`
-    <p id="${qid}Text"></p>
-<input type="radio" name="${qid}" value="Yes" onclick="toggle('${qid}',true)" required> <span class="yesText">Yes</span>
-<input type="radio" name="${qid}" value="No" onclick="toggle('${qid}',false)" required> <span class="noText">No</span>
-    <div id="${qid}" class="hidden">
-      ${isSimple ? '' : `
-        Version No <input type="text" class="detail-input"><br>
-        Issue Date <input type="date" class="detail-input"><br>
-        Effective Date <input type="date" class="detail-input"><br>
-      `}
-      <input type="file" accept="image/*" onchange="showPreview(event, '${qid}Img')">
-      <br><img id="${qid}Img" class="preview-img">
-    </div>
-    <hr>
-  `);
-}
-</script>
-
-<script>
-["q1","q2","q3","q4","q5","q6","q7","q8","q9","q10"].forEach(questionBlock);
-</script>
-
-<!-- File only questions -->
-<script>
-["q11","q12","q13","q14","q15","q16"].forEach(q=>{
-  document.write(`
-    <p id="${q}Text"></p>
- <input type="radio" name="${q}" value="Yes" onclick="toggle('${q}',true)"> <span class="yesText">Yes</span>
-<input type="radio" name="${q}" value="No" onclick="toggle('${q}',false)"> <span class="noText">No</span>
-    <div id="${q}" class="hidden">
-      <input type="file" accept="image/*" onchange="showPreview(event, '${q}Img')">
-      <br><img id="${q}Img" class="preview-img">
-    </div>
-    <hr>
-  `);
-});
-</script>
-
-<!-- Trade License -->
-<div id="tradeSection" class="hidden">
-  <p id="q17Text"></p>
-<input type="radio" name="q17" value="Yes" onclick="toggle('q17Div',true)"> <span class="yesText">Yes</span>
-<input type="radio" name="q17" value="No" onclick="toggle('q17Div',false)"> <span class="noText">No</span>
-  <div id="q17Div" class="hidden">
-    <input type="file" accept="image/*" onchange="showPreview(event, 'q17Img')">
-    <br><img id="q17Img" class="preview-img">
-  </div>
-  <hr>
-</div>
-
-<!-- ISO -->
-<div id="isoSection" class="hidden">
-  <p id="q18Text"></p>
- <input type="radio" name="q18" value="Yes" onclick="toggle('q18Div',true)"> <span class="yesText">Yes</span>
-<input type="radio" name="q18" value="No" onclick="toggle('q18Div',false)"> <span class="noText">No</span>
-  <div id="q18Div" class="hidden">
-    <input type="file" accept="image/*" onchange="showPreview(event, 'q18Img')">
-    <br><img id="q18Img" class="preview-img">
-  </div>
-</div>
-</div>
-  <!-- Page 1 Buttons -->
-  <div class="navbar">
-  <button type="button" class="btn-back" onclick="prevPage()" disabled>Back</button>
-  <button type="button" class="btn-next" onclick="submitAndNext(this)">
-    Submit and move to next page
-  </button>
-</div>
-</div>
-
-
-<div id="page2" class="form-page">
-  <h3>Page 2</h3>
-
-  <!-- Q19 -->
-  <p id="q19Text"></p>
-  <label><input type="radio" name="q19" value="Yes" onclick="toggle('q19Div',true)"> <span class="yesText">Yes</span></label>
-  <label><input type="radio" name="q19" value="No" onclick="toggle('q19Div',false)"> <span class="noText">No</span></label>
-  <div id="q19Div" class="hidden">
-    <input type="file" accept="image/*" onchange="showPreview(event,'q19Img')">
-    <br><img id="q19Img" class="preview-img">
-  </div>
-  <hr>
-
-  <!-- Q20 -->
-  <p id="q20Text"></p>
-  <label><input type="radio" name="q20" value="Yes" onclick="toggle('q20Div',true)"> <span class="yesText">Yes</span></label>
-  <label><input type="radio" name="q20" value="No" onclick="toggle('q20Div',false)"> <span class="noText">No</span></label>
-  <div id="q20Div" class="hidden">
-    <input type="file" accept="image/*" onchange="showPreview(event,'q20Img')">
-    <br><img id="q20Img" class="preview-img">
-  </div>
-  <hr>
-
-  <!-- Q21 (Multi-photo + instruction) -->
-  <p id="q21Text"></p>
-  <label><input type="radio" name="q21" value="Yes" onclick="toggle('q21Div',true)"> <span class="yesText">Yes</span></label>
-  <label><input type="radio" name="q21" value="No" onclick="toggle('q21Div',false)"> <span class="noText">No</span></label>
-  <div id="q21Div" class="hidden">
-    <div id="q21Tip" style="margin:8px 0; font-size:13px;"></div>
-
-    <div id="q21Photos"></div>
-    <button type="button" onclick="addMorePhoto('q21Photos')">+ Add more photo</button>
-  </div>
-  <hr>
-
-  <!-- Q22 -->
-  <p id="q22Text"></p>
-  <label><input type="radio" name="q22" value="Yes" onclick="toggle('q22Div',true)"> <span class="yesText">Yes</span></label>
-  <label><input type="radio" name="q22" value="No" onclick="toggle('q22Div',false)"> <span class="noText">No</span></label>
-  <div id="q22Div" class="hidden">
-    <input type="file" accept="image/*" onchange="showPreview(event,'q22Img')">
-    <br><img id="q22Img" class="preview-img">
-  </div>
-  <hr>
-
-  <!-- Q23 -->
-  <p id="q23Text"></p>
-  <label><input type="radio" name="q23" value="Yes" onclick="toggle('q23Div',true)"> <span class="yesText">Yes</span></label>
-  <label><input type="radio" name="q23" value="No" onclick="toggle('q23Div',false)"> <span class="noText">No</span></label>
-  <div id="q23Div" class="hidden">
-    <input type="file" accept="image/*" onchange="showPreview(event,'q23Img')">
-    <br><img id="q23Img" class="preview-img">
-  </div>
-  <hr>
-
-  <!-- Q24 -->
-  <p id="q24Text"></p>
-<label><input type="radio" name="q24" value="Yes" onclick="toggle('q24Div',true)"> <span class="yesText">Yes</span></label>
-<label><input type="radio" name="q24" value="No" onclick="toggle('q24Div',false)"> <span class="noText">No</span></label>
-<div id="q24Div" class="hidden">
-    <div id="q24Photos" style="margin-bottom:10px;"></div>
-    <button type="button" id="btn-add-q24" onclick="addMorePhoto('q24Photos')">+ Add more photo</button>
-</div>
-<hr>
-
-  <!-- Q25 (Fire Extinguishers: count + N photos + N expiry dates) -->
- <!-- Q25 (Fire Extinguishers: DIRECT COUNT + N photos + N expiry dates) -->
-<p id="q25Text"></p>
-
-<div id="q25Div">
-  <div style="margin:8px 0;">
-    <label id="q25CountLabel">Select number of valid fire extinguishers (min 1, max 15):</label><br>
-    <select id="q25Count" onchange="renderFireExtinguishers(this.value)">
-      <option value="">--Select--</option>
-    </select>
-  </div>
-
-  <div id="q25Items"></div>
-</div>
-<hr>
-
-  <!-- Q26 -->
-  <p id="q26Text"></p>
-  <label><input type="radio" name="q26" value="Yes" onclick="toggle('q26Div',true)"> <span class="yesText">Yes</span></label>
-  <label><input type="radio" name="q26" value="No" onclick="toggle('q26Div',false)"> <span class="noText">No</span></label>
-  <div id="q26Div" class="hidden">
-    <input type="file" accept="image/*" onchange="showPreview(event,'q26Img')">
-    <br><img id="q26Img" class="preview-img">
-  </div>
-  <hr>
-
-  <!-- Q27 -->
-  <p id="q27Text"></p>
-  <label><input type="radio" name="q27" value="Yes" onclick="toggle('q27Div',true)"> <span class="yesText">Yes</span></label>
-  <label><input type="radio" name="q27" value="No" onclick="toggle('q27Div',false)"> <span class="noText">No</span></label>
-  <div id="q27Div" class="hidden">
-    <input type="file" accept="image/*" onchange="showPreview(event,'q27Img')">
-    <br><img id="q27Img" class="preview-img">
-  </div>
-
-  <div class="navbar">
-    <button type="button" class="btn-back" onclick="prevPage()">Back</button>
-    <button type="button" class="btn-next" onclick="submitAndNext(this)">Submit and move to next page</button>
-  </div>
-</div>
-
-<div id="page3" class="form-page">
-  <h3>Page 3</h3>
-  <p>Page 3 questions yahan add honge.</p>
-  <div class="navbar"><button type="button" class="btn-back" onclick="prevPage()">Back</button>
-<button type="button" class="btn-next" onclick="submitAndNext(this)">Submit and move to next page</button>
-  </div>
-</div>
-
-<div id="page4" class="form-page">
-  <h3>Page 4</h3>
-  <p>Page 4 questions yahan add honge.</p>
-  <div class="navbar"><button type="button" class="btn-back" onclick="prevPage()">Back</button>
-<button type="button" class="btn-next" onclick="submitAndNext(this)">Submit and move to next page</button>
-  </div>
-</div>
-
-<div id="page5" class="form-page">
-  <h3>Page 5</h3>
-  <p>Page 5 questions yahan add honge.</p>
-  <div class="navbar"><button type="button" class="btn-back" onclick="prevPage()">Back</button>
-<button type="button" class="btn-next" onclick="submitAndNext(this)">Submit and move to next page</button>
-  </div>
-</div>
-
-<div id="page6" class="form-page">
-  <h3>Page 6</h3>
-  <p>Page 6 questions yahan add honge.</p>
-  <div class="navbar"><button type="button" class="btn-back" onclick="prevPage()">Back</button>
-    <button type="button" class="btn-next" onclick="submitAndNext(this)">Final Submit</button>
-  </div>
-</div>
-  
- <script>
-   let currentPage = 1;
-const totalPages = 6;
-   let progressInterval;
-let currentProgress = 0;
-
-// ✅ ADDED: Page-wise question ranges
-const PAGE_RANGES = {
-  1: { start: 1, end: 18 },
-  2: { start: 19, end: 27 },
-};
-
-// ✅ ADDED: submissionId persist (same row update)
-let submissionId = localStorage.getItem("submissionId") || "";
-
-
-// ✅ ADDED: simple id generator
-function makeId() {
-  return "sid-" + Date.now() + "-" + Math.random().toString(16).slice(2);
-}
-
-
-function showOverlay() {
-  document.getElementById("submitOverlay").classList.remove("hidden");
-  // Dynamic wait message (English + Local)
-document.getElementById("overlayMessage").innerHTML =
-  "Wait submitting data...<br>" +
-  (currentMessages?.wait || "Please wait, submitting data...");
-  currentProgress = 0;
-  updateProgress(0);
-
-  progressInterval = setInterval(() => {
-    if (currentProgress < 95) {
-      currentProgress += 1;
-      updateProgress(currentProgress);
-    }
-  }, 40); // smooth animation
-}
-
-function updateProgress(value) {
-  document.getElementById("progressFill").style.width = value + "%";
-  document.getElementById("progressText").innerText = value + "%";
-}
-
-function hideOverlay() {
-  clearInterval(progressInterval);
-  document.getElementById("submitOverlay").classList.add("hidden");
-}
-function showPage(pageNumber) {
-  document.querySelectorAll('.form-page').forEach(p => {
-    p.classList.remove('active');
-  });
-  const nextPage = document.getElementById('page' + pageNumber);
-  if (nextPage) {
-    nextPage.classList.add('active');
-    currentPage = pageNumber;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-}
-function prevPage() {
-  if (currentPage > 1) {
-    showPage(currentPage - 1);
-  }
-}
-async function submitAndNext(btn) {
-  const success = await submitForm(btn);
-
-  if (success && currentPage < totalPages) {
-    showPage(currentPage + 1);
-  }
-}
-  async function submitForm(btn) {
-  const submitBtn = btn;
-  submitBtn.innerText = (currentMessages?.wait || "Sending...");
-  submitBtn.disabled = true;
-  showOverlay();
-
-// ================= FINAL VALIDATION (Q1 - Q27) =================
-const requiredIds = ['state', 'branch', 'branchHead', 'officeBoy'];
-let firstErrorField = null;
-
-// ---------- HELPERS ----------
-function resetBorder(el) {
-  if (el) el.style.border = "";
-}
-function setRedBorder(el) {
-  if (el) el.style.border = "2px solid red";
-}
-
-// Count images in a container safely (supports data:image, blob:, http(s))
-function countPreviewPhotos(containerId) {
-  const c = document.getElementById(containerId);
-  if (!c) return 0;
-
-  const imgs = Array.from(c.querySelectorAll("img"));
-  return imgs.filter(im => {
-    const src = (im && im.src) ? im.src.trim() : "";
-    return src.startsWith("data:image") || src.startsWith("blob:") || src.startsWith("http");
-  }).length;
-}
-
-// Border highlight for multi-photo container
-function markContainer(containerId, hasError) {
-  const c = document.getElementById(containerId);
-  if (!c) return;
-  c.style.border = hasError ? "2px solid red" : "";
-}
-
-// 1) Basic Details Validation
-requiredIds.forEach(id => {
-  const el = document.getElementById(id);
-  const val = el ? String(el.value || "").trim() : "";
-
-  if (!el || !val) {
-    if (el) setRedBorder(el);
-    if (!firstErrorField) firstErrorField = el;
-  } else {
-    resetBorder(el);
-  }
-});
-
-// 2) Questions Loop (current page only)
-const r = PAGE_RANGES[currentPage] || { start: 1, end: 18 };
-
-for (let i = r.start; i <= r.end; i++) {
-  const qid = 'q' + i;
-  const qText = document.getElementById(qid + 'Text');
-  if (!qText || qText.offsetParent === null) continue; // hidden skip
-
-  // Reset question text state
-  qText.style.color = "";
-  const originalText = qText.innerText.split(' (')[0];
-  qText.innerText = originalText;
-
-  let errorMsg = "";
-
-  // ============================================================
-  // CASE 1: Q25 (Fire Extinguisher) - Dropdown + N Photos + N Dates
-  // ============================================================
-  if (qid === "q25") {
-    const countEl = document.getElementById("q25Count");
-    const countVal = countEl?.value;
-
-    resetBorder(countEl);
-
-    if (!countVal) {
-      errorMsg = currentMessages.selectCount || "SELECT COUNT!";
-      setRedBorder(countEl);
-    } else {
-      const n = parseInt(countVal, 10);
-
-      for (let k = 1; k <= n; k++) {
-        const imgK = document.getElementById(`q25Img${k}`);
-        const expK = document.getElementById(`q25Exp${k}`);
-
-        const imgSrc = imgK?.src ? imgK.src.trim() : "";
-        const hasPhoto = imgSrc.startsWith("data:image") || imgSrc.startsWith("blob:") || imgSrc.startsWith("http");
-
-        const dateVal = expK ? expK.value : "";
-        const year = dateVal ? new Date(dateVal).getFullYear() : 0;
-        const isDateValid = (year >= 2019 && year <= 2028);
-
-        // Highlight date field
-        if (expK) expK.style.border = isDateValid ? "" : "2px solid red";
-
-        if (!hasPhoto || !isDateValid) {
-          errorMsg = "ALL PHOTOS & DATES (2019-2028) REQUIRED!";
-          break;
-        }
-      }
-    }
-  }
-
-  // ============================================================
-  // CASE 2: All other questions (Radio based)
-  // ============================================================
-  else {
-    const radio = document.querySelector(`input[name="${qid}"]:checked`);
-
-    // (A) Radio mandatory
-    if (!radio) {
-      errorMsg = "SELECTION REQUIRED!";
-    }
-
-    // (B) If "Yes" then additional validations
-    else if (radio.value === "Yes") {
-
-      // Policy Details: Q3 - Q10
-      if (i >= 3 && i <= 10) {
-        const vInput = document.querySelector(`#${qid} input.detail-input:nth-of-type(1)`);
-        const iInput = document.querySelector(`#${qid} input.detail-input:nth-of-type(2)`);
-        const eInput = document.querySelector(`#${qid} input.detail-input:nth-of-type(3)`);
-
-        resetBorder(vInput);
-        resetBorder(iInput);
-        resetBorder(eInput);
-
-        const version = vInput?.value ? vInput.value.trim() : "";
-        const iYear = iInput?.value ? new Date(iInput.value).getFullYear() : 0;
-        const eYear = eInput?.value ? new Date(eInput.value).getFullYear() : 0;
-
-        const iValid = (iYear >= 2019 && iYear <= 2028);
-        const eValid = (eYear >= 2019 && eYear <= 2028);
-
-        if (!version || !iValid || !eValid) {
-          errorMsg = "VERSION & DATES (2019-2028) REQUIRED!";
-          if (!version) setRedBorder(vInput);
-          if (!iValid) setRedBorder(iInput);
-          if (!eValid) setRedBorder(eInput);
-        }
-      }
-
-      // Multi-Photo: Q21, Q24
-      if (!errorMsg && (qid === "q21" || qid === "q24")) {
-        const containerId = qid + "Photos";
-        markContainer(containerId, false);
-
-        const photoCount = countPreviewPhotos(containerId);
-
-        if (photoCount === 0) {
-          errorMsg = "MIN 1 PHOTO REQUIRED!";
-          markContainer(containerId, true);
-        } else if (photoCount > 5) {
-          errorMsg = "MAX 5 PHOTOS ALLOWED!";
-          markContainer(containerId, true);
-        }
-      }
-
-      // Standard Single Photo (exclude Q21/Q24/Q25 to avoid conflict)
-      if (!errorMsg && qid !== "q21" && qid !== "q24" && qid !== "q25") {
-        const img = document.getElementById(qid + 'Img');
-
-        // If img element doesn't exist, don't throw photo error here
-        if (img) {
-          const src = img.src ? img.src.trim() : "";
-          const hasPhoto = src.startsWith("data:image") || src.startsWith("blob:") || src.startsWith("http");
-
-          if (!hasPhoto) {
-            errorMsg = currentMessages.photo || "PHOTO REQUIRED!";
-          }
-        }
-      }
-    }
-  }
-
-  // Apply Error UI for this question
-  if (errorMsg) {
-    qText.style.color = "red";
-    qText.innerText = originalText + " (" + errorMsg + ")";
-    if (!firstErrorField) firstErrorField = qText;
-  }
-}
-
-// Final Decision
-if (firstErrorField) {
-  firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  alert(currentMessages.pending || "Please correct the highlighted fields.");
-  submitBtn.innerText = (currentMessages?.next || "Submit and move to next page");
-  submitBtn.disabled = false;
-  hideOverlay();
-  return false;
-}
-// ================= VALIDATION END =================
-
-  // Iske niche aapka purana auditData collection wala logic rahega...
-  
-  const auditData = {
-    // ✅ ADDED
-    submissionId: submissionId || "",
-    pageNo: currentPage,
-    isFinal: (currentPage === totalPages),
-    state: document.getElementById('state').value,
-    branch: document.getElementById('branch').value,
-    branchHead: document.getElementById('branchHead').value,
-    officeBoy: document.getElementById('officeBoy').value,
-    responses: {}
-  };
-
-  // ✅ IMPORTANT: Page 1 submit = NEW audit = NEW submissionId (new row)
-if (currentPage === 1) {
-  submissionId = makeId();
-  localStorage.setItem("submissionId", submissionId);
-  auditData.submissionId = submissionId;
-} else if (!submissionId) {
-  // safety fallback (agar kisi reason se id missing ho)
-  submissionId = makeId();
-  localStorage.setItem("submissionId", submissionId);
-  auditData.submissionId = submissionId;
-}
-
-
-  // ✅ CHANGED: collect only current page questions
-  const r2 = PAGE_RANGES[currentPage] || { start: 1, end: 18 };
-  for (let i = r2.start; i <= r2.end; i++) {
-    let qid = 'q' + i;
-    let radio = document.querySelector(`input[name="${qid}"]:checked`);
-    let img = document.getElementById(qid + 'Img');
-
- // ✅ ADDED: Q21 multi-photo data
-if (qid === "q21") {
-  const wrap = document.getElementById("q21Photos");
-  const imgs = wrap ? wrap.querySelectorAll("img.preview-img") : [];
-  const photos = Array.from(imgs)
-    .map(im => im.src)
-    .filter(src => src && src.startsWith("data:image"));
-
-  auditData.responses[qid] = {
-    answer: radio ? radio.value : "",
-    photos
-  };
-  continue;
-}
-
-    /// ✅ ADDED: Q25 extinguisher data
-if (qid === "q25") {
-  const count = document.getElementById("q25Count")?.value || "";
-  const n = parseInt(count || "0", 10);
-  const photos = [];
-  const expiryDates = [];
-
-  for (let k = 1; k <= n; k++) {
-    const imgK = document.getElementById("q25Img" + k);
-    const expK = document.getElementById("q25Exp" + k);
-
-    photos.push(imgK && imgK.src && imgK.src.startsWith("data:image") ? imgK.src : "");
-    expiryDates.push(expK ? expK.value : "");
-  }
-
-  auditData.responses[qid] = {
-    answer: count,          // ✅ IMPORTANT: number ko answer me save
-    count,                 // optional but ok
-    photos,
-    expiryDates
-  };
-  continue;
-}
-
-    auditData.responses[qid] = {
-      answer: radio ? radio.value : "",
-      version: document.querySelector(`#${qid} input.detail-input:nth-of-type(1)`)?.value || "",
-      issueDate: document.querySelector(`#${qid} input.detail-input:nth-of-type(2)`)?.value || "",
-      effectiveDate: document.querySelector(`#${qid} input.detail-input:nth-of-type(3)`)?.value || "",
-      photo: (img && img.src.startsWith('data:image')) ? img.src : ""
-    };
-  }
-
-  const webhookURL = "https://script.google.com/macros/s/AKfycbzC2pBNt_QgxTRR40C6w2h0qiiWSQVdLEnI1CiwgO4a70nZn3Kh_-pBairw_7ga8oQM/exec";
-
-  try {
-    const response = await fetch(webhookURL, {
-  method: "POST",
-  mode: "no-cors", // <--- Yeh line add karein
-  body: JSON.stringify(auditData),
-  headers: { "Content-Type": "text/plain;charset=utf-8" } // <--- Ise badal dein
-});
-
-    // no-cors mode mein response read nahi hota, isliye hum assume karte hain ki data chala gaya
-// Progress ko 100% karein
-clearInterval(progressInterval);
-updateProgress(100);
-
-// Success message overlay mein (Dynamic Language)
-document.getElementById("overlayMessage").innerHTML =
-  "Submitted Successfully! <br>" +
-  (currentMessages?.success || "Data submitted successfully");
-
-// Overlay thoda rukega
-setTimeout(() => {
-  hideOverlay();
-
-  // Toast message (Dynamic)
-  const toast = document.getElementById("successToast");
-  toast.innerText =
-    (currentMessages?.success || "Data submitted successfully");
-  toast.classList.remove("hidden");
-  toast.classList.add("show");
-
-  setTimeout(() => {
-    toast.classList.remove("show");
-    toast.classList.add("hidden");
-  }, 3000);
-
-}, 800);
-
-  // ✅ ADDED: clear submissionId on final submit
-  if (auditData.isFinal) {
-    localStorage.removeItem("submissionId");
-    submissionId = "";
-  }
-
-return true;
-    
-  } catch (err) {
-    console.error(err);
-    alert("Connection Error!");
-    hideOverlay();
-    return false;
-  } finally {
-    submitBtn.innerText = (currentMessages?.next || "Submit and move to next page");
-    submitBtn.disabled = false;
-  }
-}
-</script>
-<!-- ================= SCRIPT ================= -->
-
-<script>
-function toggle(id,show){
- document.getElementById(id).style.display = show ? "block" : "none";
-}
-
-
-// ✅ ADDED: Q21 Multi-photo helpers
-function addMorePhoto(containerId){
-  const wrap = document.getElementById(containerId);
-  const div = document.createElement("div");
-  div.style.marginBottom = "10px";
-
-  const input = document.createElement("input");
-  input.type = "file";
-  input.accept = "image/*";
-
-  const img = document.createElement("img");
-  img.className = "preview-img";
-  img.style.display = "none";
-
-  input.onchange = (e)=> {
-    const file = e.target.files[0];
-    if(!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev)=>{
-      img.src = ev.target.result;
-      img.style.display = "block";
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const removeBtn = document.createElement("button");
-  removeBtn.type = "button";
-  removeBtn.innerText = "✖";
-  removeBtn.style.marginLeft = "10px";
-  removeBtn.onclick = ()=> div.remove();
-
-  div.appendChild(input);
-  div.appendChild(removeBtn);
-  div.appendChild(document.createElement("br"));
-  div.appendChild(img);
-  wrap.appendChild(div);
-}
-
-function hasAnyPhotoInContainer(containerId){
-  const wrap = document.getElementById(containerId);
-  if(!wrap) return false;
-  const imgs = wrap.querySelectorAll("img.preview-img");
-  return Array.from(imgs).some(im => im.src && im.src.startsWith("data:image"));
-}
-
-// ✅ ADDED: auto 1 photo input for Q21
-document.addEventListener("DOMContentLoaded", () => {
-  // ✅ Q21: auto 1 photo input
-  const w = document.getElementById("q21Photos");
-  if (w && w.children.length === 0) addMorePhoto("q21Photos");
-
-  // ✅ Q25: dropdown options 1..15 fill
-  initQ25CountOptions();
-});
-
-// ✅ Q25: Fill dropdown 1..15 (run once)
-function initQ25CountOptions(){
-  const sel = document.getElementById("q25Count");
-  if(!sel) return;
-
-  if (sel.options.length > 1) return;
-
-  for(let i=1;i<=15;i++){
-    const o = document.createElement("option");
-    o.value = String(i);
-    o.text = String(i);
-    sel.add(o);
-  }
-}
-
-function renderFireExtinguishers(n){
-  const wrap = document.getElementById("q25Items");
-  if (!wrap) return;
-  wrap.innerHTML = "";
-  const count = parseInt(n || "0", 10);
-  if(!count) return;
-
-  for(let i=1;i<=count;i++){
-    wrap.insertAdjacentHTML("beforeend", `
-      <div style="border:1px solid #ddd;padding:10px;margin:10px 0;">
-        <b>Fire Extinguisher ${i}</b><br><br>
-        <label>Expiry / Servicing Validity Date</label><br>
-        <input type="date" id="q25Exp${i}"><br><br>
-
-        <input type="file" accept="image/*" onchange="showPreview(event,'q25Img${i}')"><br>
-        <img id="q25Img${i}" class="preview-img">
+  <div class="wrap">
+
+    <!-- ================= ALL PAGES STRUCTURE SECTION ================= -->
+    <div class="card">
+      <div id="topTitle" class="q-title"></div>
+      <div id="topSub" class="q-sub"></div>
+
+      <div class="pages">
+        <div id="page1" class="form-page active">
+          <div class="row">
+            <div class="col">
+              <div class="label" id="lblState"></div>
+              <select id="state"></select>
+            </div>
+            <div class="col">
+              <div class="label" id="lblBranch"></div>
+              <select id="branch"></select>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col">
+              <div class="label" id="lblBranchHead"></div>
+              <input id="branchHead" type="text" autocomplete="off" />
+            </div>
+            <div class="col">
+              <div class="label" id="lblOfficeBoy"></div>
+              <input id="officeBoy" type="text" autocomplete="off" />
+            </div>
+          </div>
+
+          <div id="qWrap1"></div>
+          <div class="btnbar">
+            <button id="back1" type="button"></button>
+            <button id="next1" type="button" class="primary"></button>
+          </div>
+        </div>
+
+        <div id="page2" class="form-page">
+          <div id="qWrap2"></div>
+          <div class="btnbar">
+            <button id="back2" type="button"></button>
+            <button id="next2" type="button" class="primary"></button>
+          </div>
+        </div>
+
+        <div id="page3" class="form-page">
+          <div id="qWrap3"></div>
+          <div class="btnbar">
+            <button id="back3" type="button"></button>
+            <button id="next3" type="button" class="primary"></button>
+          </div>
+        </div>
+
+        <div id="page4" class="form-page">
+          <div id="qWrap4"></div>
+          <div class="btnbar">
+            <button id="back4" type="button"></button>
+            <button id="next4" type="button" class="primary"></button>
+          </div>
+        </div>
+
+        <div id="page5" class="form-page">
+          <div id="qWrap5"></div>
+          <div class="btnbar">
+            <button id="back5" type="button"></button>
+            <button id="next5" type="button" class="primary"></button>
+          </div>
+        </div>
+
+        <div id="page6" class="form-page">
+          <div id="qWrap6"></div>
+          <div class="btnbar">
+            <button id="back6" type="button"></button>
+            <button id="next6" type="button" class="primary"></button>
+          </div>
+        </div>
       </div>
-    `);
-  }
-}
+    </div>
+  </div>
 
-
-
-
-const branchMap={
-"Andhra Pradesh":["Tirupati","Vijayawada","Visakhapatnam"],
-"Telangana":["Hyderabad"],
-"Tamil Nadu":["Chennai","Coimbatore","Madurai","Salem","Tirupur","Tiruvallur"],
-"Karnataka":["Bangalore","Belgaum","Gulbarga","Hubballi","Mangalore","Mysore","Tumkur"],
-"Delhi":["Delhi"],
-"Gujarat":["Ahmedabad","Baroda","Rajkot","Surat"],
-"Maharashtra":["Aurangabad","Borivali","Kolhapur","Nagpur","Nashik","Pune","Thane"],
-"Rajasthan":["Ajmer","Jaipur","Jodhpur","Sikar","Udaipur"],
-"Uttar Pradesh":["Lucknow"],
-"West Bengal":["Kolkata"],
-"Punjab":["Jalandhar","Ludhiana"],
-"Haryana":["Panipat"],
-"Madhya Pradesh":["Bhopal","Gwalior","Indore"],
-"Odisha":["Bhubaneswar"],
-"Puducherry":["Puducherry"],
-"Jharkhand":["Jamshedpur"],
-"Chandigarh":["Chandigarh"]
-};
-
-const trade=["Bhubaneswar","Hyderabad","Kolkata","Puducherry","Tirupati"];
-const iso=["Bangalore","Chennai","Delhi","Hyderabad","Jaipur","Pune","Kolkata","Coimbatore","Ahmedabad"];
-
-function loadBranches(){
-  const stateEl = document.getElementById("state");
-  const branchEl = document.getElementById("branch");
-  if (!stateEl || !branchEl) return;
-
-  branchEl.innerHTML = "";
-  (branchMap[stateEl.value] || []).forEach(b => {
-    const o = document.createElement("option");
-    o.text = o.value = b;
-    branchEl.add(o);
-  });
-
-  checkConditions();
-}
-
-function checkConditions(){
-  const branchEl = document.getElementById("branch");
-  const tradeSectionEl = document.getElementById("tradeSection");
-  const isoSectionEl = document.getElementById("isoSection");
-  if (!branchEl) return;
-
-  if (tradeSectionEl) tradeSectionEl.style.display = trade.includes(branchEl.value) ? "block" : "none";
-  if (isoSectionEl) isoSectionEl.style.display = iso.includes(branchEl.value) ? "block" : "none";
-}
-</script>
+  <!-- success popup -->
+  <div id="overlay" class="overlay" aria-hidden="true">
+    <div class="modal">
+      <h3 id="okTitle"></h3>
+      <p id="okSub"></p>
+    </div>
+  </div>
 
 <script>
-const QUESTIONS={
+/* ================= CONFIG PLACEHOLDERS (PASTE YOUR DATA HERE) ================= */
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzC2pBNt_QgxTRR40C6w2h0qiiWSQVdLEnI1CiwgO4a70nZn3Kh_-pBairw_7ga8oQM/exec";
+
+const msgLabels = {
+  hi: {
+     y: "हाँ / Yes", n: "नहीं / No",
+     next: "save और आगे बढ़ें / Save & Next",
+    back: "पीछे जाएं / Back",
+     photo: "फोटो अपलोड करें। / UPLOAD PHOTO!",
+     date: "Date ठीक करें / WRONG DATE!",
+     version: "कृपया Version No भरें / Please enter Version No!",
+     firstAidTip: "सारी दवाइयाँ एक साथ रखें ताकि सभी expiry dates दिखें, फिर फोटो क्लिक करें। / Arrange all the medicines next to each other so expiry date of all medicines is visible and then click the photo.",
+     selectCount: "कृपया Fire Extinguisher की संख्या चुनें (max 15). / Please select number of Fire Extinguishers (max 15).",
+     pending: "कृपया सारी जानकारी भरें (लाल रंग में हाईलाइट किया गया)। / fill all details (highlighted in red).",
+     success: "Report सबमिट हो गया है! / Report Submitted successfully.",
+     wait: "कृपया प्रतीक्षा करें, डेटा भेजा जा रहा है…",
+   },
+   te: {
+     y: "అవును / Yes", n: "కాదు / No",
+    next: "సేవ్ చేసి కొనసాగండి / Save & Next",
+    back: "మునుపటి పేజీకి వెళ్ళండి / Back",
+     photo: "ఫోటోను అప్‌లోడ్ చేయండి / UPLOAD PHOTO!",
+     date: "తేదీని నిర్ణయించండి / INVALID DATE!",
+     firstAidTip: "అన్ని మందులను కలిపి ఉంచండి, తద్వారా అన్ని మందుల expiry date స్పష్టంగా కనిపిస్తుంది, తరువాత photo తీసుకోండి./ Arrange all the medicines next to each other so expiry date of all medicines is visible and then click the photo.",
+     selectCount: "कृपया Fire Extinguisher की संख्या चुनें (max 15). / Please select number of Fire Extinguishers (max 15).",
+     version: "దయచేసి version no ని నమోదు చేయండి / Please enter Version No!",
+     pending: "దయచేసి అన్ని వివరాలను పూరించండి (ఎరుపు రంగులో హైలైట్ చేయబడింది). / Please fill all details (highlighted in red).",
+     success: "నివేదిక విజయవంతంగా సమర్పించబడింది. / Report Submitted successfully.",
+     wait: "దయచేసి వేచి ఉండండి, డేటా పంపబడుతోంది…",
+   },
+   ta: {
+     y: "ஆம் / Yes", n: "இல்லை / No",
+       next: "சேமித்து தொடரவும் / Save & Next",
+    back: "முந்தைய பக்கத்திற்கு செல்லவும் / Back",
+     photo: "புகைப்படத்தை பதிவேற்றவும் / UPLOAD PHOTO!",
+     date: "தேதியை நிர்ணயிக்கவும் / INVALID DATE!",
+     version: "version no ஐ உள்ளிடவும். / Please enter Version No!",
+     firstAidTip: "அனைத்து மருந்துகளின் expiry date தெளிவாகத் தெரியும்படி அனைத்து மருந்துகளையும் ஒன்றாக வைக்கவும், பின்னர் photo எடுத்துக்கொள்ளவும்./ Arrange all the medicines next to each other so expiry date of all medicines is visible and then click the photo.",
+     selectCount: "कृपया Fire Extinguisher की संख्या चुनें (max 15). / Please select number of Fire Extinguishers (max 15).",
+     pending: "தயவுசெய்து அனைத்து விவரங்களையும் நிரப்பவும் (சிவப்பு நிறத்தில் சிறப்பிக்கப்பட்டுள்ளது). / Please fill all details (highlighted in red).",
+     success: "அறிக்கை வெற்றிகரமாக சமர்ப்பிக்கப்பட்டது./ Report Submitted successfully.",
+     wait: "தயவுசெய்து காத்திருக்கவும், தரவு அனுப்பப்படுகிறது…",
+   },
+   kn: {
+     y: "ಹೌದು / Yes", n: "ಇಲ್ಲ / No",
+       next: "ಉಳಿಸಿ ಮತ್ತು ಮುಂದುವರೆಯಿರಿ / Save & Next",
+    back: "ಹಿಂದಿನ ಪುಟಕ್ಕೆ ಹೋಗಿ / Back",
+     photo: "ಫೋಟೋ ಅಪ್ಲೋಡ್ / UPLOAD PHOTO!",
+     date: "ದಿನಾಂಕವನ್ನು ನಿಗದಿಪಡಿಸಿ / INVALID DATE!",
+     version: "ದಯವಿಟ್ಟು version no ನಮೂದಿಸಿ / Please enter Version No!",
+     firstAidTip: "ಎಲ್ಲಾ ಔಷಧಿಗಳ expiry date ಸ್ಪಷ್ಟವಾಗಿ ಗೋಚರಿಸುವಂತೆ ಎಲ್ಲಾ ಔಷಧಿಗಳನ್ನು ಒಟ್ಟಿಗೆ ಇರಿಸಿ, ನಂತರ photo ತೆಗೆದುಕೊಳ್ಳಿ/ Arrange all the medicines next to each other so expiry date of all medicines is visible and then click the photo.",
+     selectCount: "कृपया Fire Extinguisher की संख्या चुनें (max 15). / Please select number of Fire Extinguishers (max 15).",
+     pending: "ದಯವಿಟ್ಟು ಎಲ್ಲಾ ವಿವರಗಳನ್ನು ಭರ್ತಿ ಮಾಡಿ (ಕೆಂಪು ಬಣ್ಣದಲ್ಲಿ ಹೈಲೈಟ್ ಮಾಡಲಾಗಿದೆ). / Please fill all details (highlighted in red).",
+     success: "ವರದಿಯನ್ನು ಯಶಸ್ವಿಯಾಗಿ ಸಲ್ಲಿಸಲಾಗಿದೆ. / Report Submitted successfully.",
+     wait: "ದಯವಿಟ್ಟು ಕಾಯಿರಿ, ಡೇಟಾ ಕಳುಹಿಸಲಾಗುತ್ತಿದೆ…",
+   }
+ };
+const branchAssetList = {
+"Madurai": [
+    { code: "MAD/OE/07/18-19/203", desc: "GODREJ ELECTRONIC SAFE" },
+    { code: "MAD/OE/07/18-19/228", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "MAD/OE/07/18-19/229", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "MAD/OE/07/18-19/262", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "MAD/OE/11/19-20/035", desc: "APC SRC3KUXI 3KVA UPS" },
+    { code: "MAD/OE/11/19-20/036", desc: "APC SRC3KUXI 3KVA UPS" },
+    { code: "MAD/OE/12/19-20/040", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "MAD/OE/12/19-20/041", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "MAD/OE/12/19-20/042", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "MAD/OE/12/19-20/043", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "MAD/OE/12/19-20/044", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "MAD/OE/12/19-20/045", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "MAD/OE/12/19-20/046", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "MAD/OE/12/19-20/047", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "MAD/OE/12/19-20/048", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "MAD/OE/03/20-21/049", desc: "BIOMETRIC" }
+  ],
+  "Puducherry": [
+    { code: "PUD/OE/03/23-24/001", desc: "DVR" },
+    { code: "PUD/OE/03/23-24/002", desc: "CCTV Camera" },
+    { code: "PUD/OE/03/23-24/003", desc: "CCTV Camera" },
+    { code: "PUD/OE/03/23-24/004", desc: "CCTV Camera" },
+    { code: "PUD/OE/03/23-24/005", desc: "Biometric" },
+    { code: "PUD/OE/03/23-24/006", desc: "UPS 3KVA" },
+    { code: "PUD/OE/03/23-24/007", desc: "Battery" },
+    { code: "PUD/OE/03/23-24/008", desc: "Battery" },
+    { code: "PUD/OE/03/23-24/009", desc: "Battery" },
+    { code: "PUD/OE/03/23-24/010", desc: "Battery" },
+    { code: "PUD/OE/03/23-24/011", desc: "Battery" },
+    { code: "PUD/OE/03/23-24/012", desc: "Battery" },
+    { code: "PUD/OE/03/23-24/013", desc: "Godrej Electronic Safe" },
+    { code: "PUD/OE/03/23-24/014", desc: "Fire Extinguisher" },
+    { code: "PUD/OE/03/23-24/015", desc: "Fire Extinguisher" }
+  ],
+  "Jaipur": [
+    { code: "JAI/OE/03/18-19/049", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "JAI/OE/05/18-19/133", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "JAI/OE/05/18-19/137", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "JAI/OE/07/18-19/212", desc: "GODREJ ELECTRONIC SAFE" },
+    { code: "JAI/OE/12/19-20/053", desc: "Shredder Machine" },
+    { code: "JAI/OE/01/21-22/054", desc: "EXIDE SMF BATTERY 12V/42AH" },
+    { code: "JAI/OE/01/21-22/055", desc: "EXIDE SMF BATTERY 12V/42AH" },
+    { code: "JAI/OE/01/21-22/056", desc: "EXIDE SMF BATTERY 12V/42AH" },
+    { code: "JAI/OE/01/21-22/057", desc: "EXIDE SMF BATTERY 12V/42AH" },
+    { code: "JAI/OE/01/21-22/058", desc: "EXIDE SMF BATTERY 12V/42AH" },
+    { code: "JAI/OE/01/21-22/059", desc: "EXIDE SMF BATTERY 12V/42AH" },
+    { code: "JAI/OE/01/21-22/060", desc: "EXIDE SMF BATTERY 12V/42AH" },
+    { code: "JAI/OE/01/21-22/061", desc: "EXIDE SMF BATTERY 12V/42AH" },
+    { code: "JAI/OE/01/21-22/062", desc: "EXIDE SMF BATTERY 12V/42AH" },
+    { code: "JAI/OE/01/21-22/063", desc: "EXIDE SMF BATTERY 12V/42AH" },
+    { code: "JAI/OE/01/21-22/064", desc: "EXIDE SMF BATTERY 12V/42AH" },
+    { code: "JAI/OE/01/21-22/065", desc: "EXIDE SMF BATTERY 12V/42AH" },
+    { code: "JAI/OE/01/21-22/066", desc: "EXIDE SMF BATTERY 12V/42AH" },
+    { code: "JAI/OE/01/21-22/067", desc: "EXIDE SMF BATTERY 12V/42AH" },
+    { code: "JAI/OE/01/21-22/068", desc: "EXIDE SMF BATTERY 12V/42AH" }
+  ],
+  "Tirupati": [
+    { code: "TIR/OE/12/22-23/001", desc: "WATER DISPANCER" },
+    { code: "TIR/OE/12/22-23/002", desc: "BIOMETRIC" },
+    { code: "TIR/OE/12/22-23/003", desc: "GODREJ ELECTRONIC SAFE" },
+    { code: "TIR/OE/12/22-23/004", desc: "DVR 4CH" },
+    { code: "TIR/OE/12/22-23/005", desc: "CCTV CAMERA" },
+    { code: "TIR/OE/12/22-23/006", desc: "CCTV CAMERA" },
+    { code: "TIR/OE/12/22-23/007", desc: "CCTV CAMERA" },
+    { code: "TIR/OE/12/22-23/008", desc: "UPS 3KVA" },
+    { code: "TIR/OE/12/22-23/009", desc: "SMF BATTERY 42AH" },
+    { code: "TIR/OE/12/22-23/010", desc: "SMF BATTERY 42AH" },
+    { code: "TIR/OE/12/22-23/011", desc: "SMF BATTERY 42AH" },
+    { code: "TIR/OE/12/22-23/012", desc: "SMF BATTERY 42AH" },
+    { code: "TIR/OE/12/22-23/013", desc: "SMF BATTERY 42AH" },
+    { code: "TIR/OE/12/22-23/014", desc: "SMF BATTERY 42AH" }
+  ],
+  
+  "Chennai":[
+    { code: "CHE/OE/06/15-16/004", desc: "LED TV" },
+    { code: "CHE/OE/06/15-16/005", desc: "REFRIGERATOR" },
+    { code: "CHE/OE/05/18-19/143", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "CHE/OE/05/18-19/144", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "CHE/OE/05/18-19/145", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "CHE/OE/05/18-19/146", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "CHE/OE/05/18-19/147", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "CHE/OE/05/18-19/148", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "CHE/OE/05/18-19/149", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "CHE/OE/05/18-19/150", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "CHE/OE/05/18-19/151", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "CHE/OE/05/18-19/152", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "CHE/OE/05/18-19/153", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "CHE/OE/05/18-19/154", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "CHE/OE/05/18-19/164", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "CHE/OE/05/18-19/165", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "CHE/OE/05/18-19/166", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "CHE/OE/05/18-19/167", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "CHE/OE/06/18-19/178", desc: "APC 1 KVA UPS" },
+    { code: "CHE/OE/06/18-19/180", desc: "APC 1 KVA UPS" },
+    { code: "CHE/OE/06/18-19/181", desc: "APC 1 KVA UPS" },
+    { code: "CHE/OE/07/18-19/204", desc: "GODREJ ELECTRONIC SAFE" },
+    { code: "CHE/OE/07/18-19/213", desc: "GODREJ ELECTRONIC SAFE" },
+    { code: "CHE/OE/08/18-19/274", desc: "DOME CAMERA, POWER SUPPLY" },
+    { code: "CHE/OE/10/18-19/335", desc: "APC UPS" },
+    { code: "CHE/OE/11/19-20/017", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "CHE/OE/11/19-20/018", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "CHE/OE/11/19-20/019", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "CHE/OE/11/19-20/020", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "CHE/OE/11/19-20/021", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "CHE/OE/11/19-20/022", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "CHE/OE/11/19-20/023", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "CHE/OE/11/19-20/024", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "CHE/OE/11/19-20/025", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "CHE/OE/11/19-20/026", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "CHE/OE/11/19-20/027", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "CHE/OE/11/19-20/028", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "CHE/OE/11/19-20/029", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "CHE/OE/11/19-20/030", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "CHE/OE/11/19-20/031", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "CHE/OE/11/19-20/032", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "CHE/OE/11/19-20/033", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "CHE/OE/11/19-20/034", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "CHE/OE/12/19-20/049", desc: "Shredder Machine" },
+    { code: "CHE/OE/12/19-20/050", desc: "Biometric machine" },
+    { code: "CHE/OE/12/19-20/051", desc: "Fire extinguisher" },
+    { code: "CHE/OE/12/19-20/052", desc: "Fire extinguisher" },
+    { code: "CHE/OE/01/20-21/053", desc: "Biometric machine" },
+    { code: "CHE/OE/03/20-21/054", desc: "Blue Star Water Dispenser" },
+    { code: "CHE/OE/03/20-21/055", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "CHE/OE/03/20-21/056", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "CHE/OE/03/20-21/057", desc: "CCTV CAMERA & ACCESSORIES" }
+  ],
+  "Ahmedabad": [
+    { code: "AHM/OE/03/18-19/050", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "AHM/OE/05/18-19/132", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "AHM/OE/05/18-19/142", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "AHM/OE/07/18-19/200", desc: "GODREJ ELECTRONIC SAFE" },
+    { code: "AHM/OE/07/18-19/205", desc: "GODREJ ELECTRONIC SAFE" },
+    { code: "AHM/OE/03/21-22/044", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "AHM/OE/03/21-22/045", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "AHM/OE/03/21-22/046", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "AHM/OE/03/21-22/047", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "AHM/OE/03/21-22/048", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "AHM/OE/03/21-22/049", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "AHM/OE/03/21-22/050", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "AHM/OE/03/21-22/051", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "AHM/OE/03/21-22/052", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "AHM/OE/03/21-22/053", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "AHM/OE/03/21-22/054", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "AHM/OE/03/21-22/055", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "AHM/OE/03/21-22/056", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "AHM/OE/03/21-22/057", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "AHM/OE/03/21-22/058", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "AHM/OE/03/21-22/059", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "AHM/OE/03/21-22/060", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "AHM/OE/03/21-22/061", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "AHM/OE/03/21-22/062", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "AHM/OE/03/21-22/063", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "AHM/OE/03/21-22/064", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "AHM/OE/03/21-22/065", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "AHM/OE/03/21-22/066", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "AHM/OE/03/21-22/067", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "AHM/OE/03/21-22/068", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "AHM/OE/03/21-22/069", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "AHM/OE/03/21-22/070", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "AHM/OE/03/21-22/071", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "AHM/OE/03/21-22/072", desc: "EXIDE 12V-42AH SMF BATTERY" }
+  ],
+  "Visakhapatnam": [
+    { code: "VIS/OE/07/18-19/223", desc: "GODREJ ELECTRONIC SAFE" },
+    { code: "VIS/OE/07/18-19/235", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "VIS/OE/07/18-19/247", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "VIS/OE/08/18-19/277", desc: "DOME CAMERA, POWER SUPPLY" },
+    { code: "VIS/OE/09/18-19/293", desc: "APC UPS" },
+    { code: "VIS/OE/01/21-22/058", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "VIS/OE/01/21-22/059", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "VIS/OE/01/21-22/060", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "VIS/OE/01/21-22/061", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "VIS/OE/01/21-22/062", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "VIS/OE/01/21-22/063", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "VIS/OE/01/21-22/064", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "VIS/OE/01/21-22/065", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "VIS/OE/01/21-22/066", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "VIS/OE/01/21-22/067", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "VIS/OE/01/21-22/068", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "VIS/OE/01/21-22/069", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "VIS/OE/01/21-22/070", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "VIS/OE/01/21-22/071", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "VIS/OE/01/21-22/072", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "VIS/OE/01/21-22/073", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "VIS/OE/01/21-22/074", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "VIS/OE/01/21-22/075", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "VIS/OE/01/21-22/076", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "VIS/OE/01/21-22/077", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "VIS/OE/01/21-22/078", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "VIS/OE/01/21-22/079", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "VIS/OE/01/21-22/080", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "VIS/OE/01/21-22/081", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "VIS/OE/01/21-22/082", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "VIS/OE/01/21-22/083", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "VIS/OE/01/21-22/084", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "VIS/OE/01/21-22/085", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "VIS/OE/01/21-22/086", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "VIS/OE/01/21-22/087", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "VIS/OE/01/21-22/088", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "VIS/OE/01/21-22/089", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "VIS/OE/01/21-22/090", desc: "EXIDE 12V-42AH SMF BATTERY" },
+    { code: "VIS/OE/01/21-22/091", desc: "EXIDE 12V-42AH SMF BATTERY" }
+  ],
+  "Surat": [
+    { code: "KOL/OE/03/18-19/035", desc: "EXIDE BATTERY" },
+    { code: "KOL/OE/03/18-19/036", desc: "EXIDE BATTERY" },
+    { code: "KOL/OE/03/18-19/037", desc: "EXIDE BATTERY" },
+    { code: "KOL/OE/03/18-19/038", desc: "EXIDE BATTERY" },
+    { code: "KOL/OE/03/18-19/039", desc: "EXIDE BATTERY" },
+    { code: "KOL/OE/03/18-19/040", desc: "EXIDE BATTERY" },
+    { code: "KOL/OE/03/18-19/041", desc: "EXIDE BATTERY" },
+    { code: "KOL/OE/03/18-19/042", desc: "EXIDE BATTERY" },
+    { code: "SUR/OE/12/21-22/001", desc: "CCTV Camera" },
+    { code: "SUR/OE/12/21-22/002", desc: "CCTV Camera" },
+    { code: "SUR/OE/12/21-22/003", desc: "CCTV Camera" },
+    { code: "SUR/OE/12/21-22/004", desc: "CCTV Camera" },
+    { code: "SUR/OE/12/21-22/005", desc: "UPS 3KVA" },
+    { code: "SUR/OE/12/21-22/006", desc: "Biometric machine" },
+    { code: "SUR/OE/12/21-22/007", desc: "Godrej Electronic safe" },
+    { code: "SUR/OE/12/21-22/008", desc: "Water Dispenser" },
+    { code: "SUR/OE/12/21-22/009", desc: "Fire Extinguisher" },
+    { code: "SUR/OE/12/21-22/010", desc: "Fire Extinguisher" }
+  ],
+  "Chandigarh": [
+    { code: "CHA/OE/04/18-19/080", desc: "SMF BATTRY Rack" },
+    { code: "CHA/OE/04/18-19/125", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "CHA/OE/05/18-19/136", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "CHA/OE/06/18-19/189", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "CHA/OE/07/18-19/211", desc: "GODREJ ELECTRONIC SAFE" },
+    { code: "CHA/OE/11/19-20/037", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "CHA/OE/11/19-20/038", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "CHA/OE/11/19-20/039", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "CHA/OE/11/19-20/040", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "CHA/OE/11/19-20/041", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "CHA/OE/11/19-20/042", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "CHA/OE/11/19-20/043", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "CHA/OE/11/19-20/044", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "CHA/OE/11/19-20/045", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "CHA/OE/11/19-20/046", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "CHA/OE/11/19-20/047", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "CHA/OE/11/19-20/048", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "CHA/OE/12/19-20/042", desc: "APC 1KVA UPS" },
+    { code: "CHA/OE/03/20-21/043", desc: "APC 1KVA UPS" }
+  ],
+
+  "Coimbatore": [
+    { code: "COI/OE/07/18-19/201", desc: "GODREJ ELECTRONIC SAFE" },
+    { code: "COI/OE/07/18-19/249", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "COI/OE/11/18-19/314", desc: "APC UPS" },
+    { code: "COI/OE/11/18-19/321", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "COI/OE/11/18-19/322", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "COI/OE/11/18-19/330", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "COI/OE/11/19-20/030", desc: "APC SRC3KUXI 3KVA UPS" },
+    { code: "COI/OE/11/19-20/031", desc: "APC SRC3KUXI 3KVA UPS" },
+    { code: "COI/OE/11/19-20/032", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "COI/OE/11/19-20/033", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "COI/OE/11/19-20/034", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "COI/OE/11/19-20/035", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "COI/OE/11/19-20/036", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "COI/OE/11/19-20/037", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "COI/OE/12/19-20/038", desc: "Shredder Machine" },
+    { code: "COI/OE/12/19-20/039", desc: "Biometric machine" }
+  ],
+  "Hyderabad": [
+    { code: "HYD/OE/07/15-16/006", desc: "SONY RECORDER" },
+    { code: "HYD/OE/07/15-16/007", desc: "MICRO WAVE" },
+    { code: "HYD/OE/07/15-16/008", desc: "DISPENSER" },
+    { code: "HYD/OE/07/15-16/009", desc: "LED TV" },
+    { code: "HYD/OE/04/18-19/123", desc: "APC UPS" },
+    { code: "HYD/OE/04/18-19/124", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "HYD/OE/05/18-19/140", desc: "APC UPS" },
+    { code: "HYD/OE/05/18-19/141", desc: "APC UPS" },
+    { code: "HYD/OE/06/18-19/179", desc: "APC UPS" },
+    { code: "HYD/OE/07/18-19/199", desc: "GODREJ ELECTRONIC SAFE" },
+    { code: "HYD/OE/07/18-19/208", desc: "GODREJ ELECTRONIC SAFE" },
+    { code: "HYD/OE/11/19-20/001", desc: "APC SRC3KUXI 3KVA UPS" },
+    { code: "HYD/OE/11/19-20/002", desc: "APC SRC3KUXI 3KVA UPS" },
+    { code: "HYD/OE/11/19-20/003", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "HYD/OE/11/19-20/004", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "HYD/OE/11/19-20/005", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "HYD/OE/11/19-20/006", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "HYD/OE/11/19-20/007", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "HYD/OE/11/19-20/008", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "HYD/OE/12/19-20/054", desc: "Shredder Machine" },
+    { code: "HYD/OE/12/19-20/055", desc: "Biometric machine" }
+  ],
+  "Vijayawada": [
+    { code: "VIJ/OE/06/18-19/186", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "VIJ/OE/06/18-19/187", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "VIJ/OE/07/18-19/215", desc: "GODREJ ELECTRONIC SAFE" },
+    { code: "VIJ/OE/08/18-19/292", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "VIJ/OE/11/18-19/328", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "VIJ/OE/11/19-20/043", desc: "APC SRC3KUXI 3KVA UPS" },
+    { code: "VIJ/OE/11/19-20/044", desc: "APC SRC3KUXI 3KVA UPS" },
+    { code: "VIJ/OE/12/19-20/049", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "VIJ/OE/12/19-20/050", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "VIJ/OE/12/19-20/051", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "VIJ/OE/12/19-20/052", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "VIJ/OE/12/19-20/053", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "VIJ/OE/12/19-20/054", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "VIJ/OE/12/19-20/055", desc: "Shredder Machine" },
+    { code: "VIJ/OE/12/19-20/056", desc: "Biometric machine" }
+  ],
+  "Mangalore": [
+    { code: "MGR/OE/04/23-24/001", desc: "QNTA SMF battery" },
+    { code: "MGR/OE/04/23-24/002", desc: "QNTA SMF battery" },
+    { code: "MGR/OE/04/23-24/003", desc: "QNTA SMF battery" },
+    { code: "MGR/OE/04/23-24/004", desc: "QNTA SMF battery" },
+    { code: "MGR/OE/04/23-24/005", desc: "QNTA SMF battery" },
+    { code: "MGR/OE/04/23-24/006", desc: "QNTA SMF battery" },
+    { code: "MGR/OE/04/23-24/007", desc: "Godrej safe" },
+    { code: "MGR/OE/04/23-24/008", desc: "CCTV camera" },
+    { code: "MGR/OE/04/23-24/009", desc: "ABC fire extinguisher" },
+    { code: "MGR/OE/04/23-24/010", desc: "ABC fire extinguisher" },
+    { code: "MGR/OE/04/23-24/011", desc: "ABC fire extinguisher" },
+    { code: "MGR/OE/04/23-24/012", desc: "Induction stove" },
+    { code: "MGR/OE/04/23-24/013", desc: "Water dispenser" },
+    { code: "MGR/OE/05/23-24/014", desc: "Finger print lock" },
+    { code: "MGR/OE/05/23-24/015", desc: "DVR" },
+    { code: "MGR/OE/05/23-24/016", desc: "APC 3 kva UPS" }
+  ],
+  "Tumkur": [
+    { code: "TUM/OE/09/25-26/001", desc: "Fire Extinguisher" },
+    { code: "TUM/OE/09/25-26/002", desc: "Fire Extinguisher" },
+    { code: "TUM/OE/09/25-26/003", desc: "Fire Extinguisher" },
+    { code: "TUM/OE/09/25-26/004", desc: "WATER DISPANCER" },
+    { code: "TUM/OE/09/25-26/005", desc: "INDUCTION" },
+    { code: "TUM/OE/09/25-26/006", desc: "DVR" },
+    { code: "TUM/OE/09/25-26/007", desc: "CAMERA" },
+    { code: "TUM/OE/09/25-26/008", desc: "GODREJ SAFE" },
+    { code: "TUM/OE/11/25-26/001", desc: "UPS" },
+    { code: "TUM/OE/11/25-26/002", desc: "BATTERY" },
+    { code: "TUM/OE/11/25-26/003", desc: "BATTERY" },
+    { code: "TUM/OE/11/25-26/004", desc: "BATTERY" },
+    { code: "TUM/OE/11/25-26/005", desc: "BATTERY" },
+    { code: "TUM/OE/11/25-26/006", desc: "BATTERY" },
+    { code: "TUM/OE/11/25-26/007", desc: "BATTERY" }
+  ],
+  "Mysore": [
+    { code: "MYS/OE/02/18-19/031", desc: "INDOOR AC" },
+    { code: "MYS/OE/06/18-19/164", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "MYS/OE/06/18-19/182", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "MYS/OE/06/18-19/183", desc: "CCTV CAMERA & ACCESSORIES" },
+    { code: "MYS/OE/07/18-19/202", desc: "GODREJ ELECTRONIC SAFE" },
+    { code: "MYS/OE/07/18-19/214", desc: "GODREJ ELECTRONIC SAFE" },
+    { code: "MYS/OE/11/19-20/037", desc: "APC SRC3KUXI 3KVA UPS" },
+    { code: "MYS/OE/11/19-20/038", desc: "APC SRC3KUXI 3KVA UPS" },
+    { code: "MYS/OE/12/19-20/043", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "MYS/OE/12/19-20/044", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "MYS/OE/12/19-20/045", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "MYS/OE/12/19-20/046", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "MYS/OE/12/19-20/047", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "MYS/OE/12/19-20/048", desc: "EXIDE 12V 42AH SMF BATTERY" },
+    { code: "MYS/OE/12/19-20/049", desc: "Shredder Machine" },
+    { code: "MYS/OE/12/19-20/050", desc: "Biometric machine" }
+  ],
+  "Hubli": [
+    { code: "HUB/OE/01/23-24/001", desc: "New ABC 4KG FIRE EXTINGUSHER" },
+    { code: "HUB/OE/01/23-24/002", desc: "New ABC 4KG FIRE EXTINGUSHER" },
+    { code: "HUB/OE/01/23-24/003", desc: "New Co2 2KG FIRE EXTINGUSHER" },
+    { code: "HUB/OE/02/23-24/001", desc: "BATTERY" },
+    { code: "HUB/OE/02/23-24/002", desc: "BATTERY" },
+    { code: "HUB/OE/02/23-24/003", desc: "BATTERY" },
+    { code: "HUB/OE/02/23-24/004", desc: "BATTERY" },
+    { code: "HUB/OE/02/23-24/005", desc: "BATTERY" },
+    { code: "HUB/OE/02/23-24/006", desc: "BATTERY" },
+    { code: "HUB/OE/02/23-24/007", desc: "GODREJ SAFE" },
+    { code: "HUB/OE/02/23-24/008", desc: "BIOMETRIC FINGER" },
+    { code: "HUB/OE/03/23-24/001", desc: "3KVA UPS" },
+    { code: "HUB/OE/03/23-24/002", desc: "WATER DISPENSER" },
+    { code: "HUB/OE/03/23-24/003", desc: "INDUCTION STOVE" },
+    { code: "HUB/OE/03/23-24/004", desc: "CCTV DVR" },
+    { code: "HUB/OE/03/23-24/005", desc: "CCTV CAMERA" }
+  ],
+  "Belgaum": [
+    { code: "BEL/OE/10/25-26/001", desc: "UPS & Battery Rack" },
+    { code: "BEL/OE/10/25-26/002", desc: "UPS Battery" },
+    { code: "BEL/OE/10/25-26/003", desc: "Induction Top" },
+    { code: "BEL/OE/10/25-26/004", desc: "Water Dispenser" },
+    { code: "BEL/OE/10/25-26/005", desc: "Fire Extinguisher" },
+    { code: "BEL/OE/10/25-26/006", desc: "Fire Extinguisher" },
+    { code: "BEL/OE/10/25-26/007", desc: "Fire Extinguisher" },
+    { code: "BEL/OE/10/25-26/008", desc: "GODREJ SAFE" },
+    { code: "BEL/OE/10/25-26/009", desc: "DVR" },
+    { code: "BEL/OE/10/25-26/010", desc: "CCTV Camera" },
+    { code: "BEL/OE/11/25-26/001", desc: "UPS" },
+    { code: "BEL/OE/11/25-26/002", desc: "BATTERY" },
+    { code: "BEL/OE/11/25-26/003", desc: "BATTERY" },
+    { code: "BEL/OE/11/25-26/004", desc: "BATTERY" },
+    { code: "BEL/OE/11/25-26/005", desc: "BATTERY" },
+    { code: "BEL/OE/11/25-26/006", desc: "BATTERY" },
+    { code: "BEL/OE/11/25-26/007", desc: "BATTERY" }
+  ]
+};
+const STATE_LANG = {
+"Andhra Pradesh":"te","Telangana":"te",
+"Tamil Nadu":"ta","Karnataka":"kn",
+"Delhi":"hi","Gujarat":"hi","Maharashtra":"hi",
+"Rajasthan":"hi","Uttar Pradesh":"hi","West Bengal":"hi",
+"Punjab":"hi","Haryana":"hi","Madhya Pradesh":"hi",
+"Odisha":"hi","Puducherry":"ta","Jharkhand":"hi","Chandigarh":"hi"
+};
+const QUESTIONS = {
 q1:{hi:"क्या RBI certificate  Notice बोर्ड पर प्रदर्शित है?/Is RBI certificate displayed on the notice Board?",
 te:"నోటీసు బోర్డులో  RBI certificate   ప్రదర్శించబడిందా?/Is RBI certificate displayed on the notice Board?",
 ta:"அறிவிப்பு பலகையில் RBI certificate  காட்டப்பட்டுள்ளதா?/Is RBI certificate displayed on the notice Board?",
 kn:"ಸೂಚನಾ ಫಲಕದಲ್ಲಿ  RBI certificate ಎಂದು ಪ್ರದರ್ಶಿಸಲಾಗಿದೆಯೇ?/Is RBI certificate displayed on the notice Board?"},
+
 q2:{hi:"क्या Certificate of Incorporation  Notice बोर्ड पर प्रदर्शित है?/Is Certificate of Incorporation displayed on notice board?",
 te:"నోటీసు బోర్డులో  Certificate of Incorporation   ప్రదర్శించబడిందా?/Is Certificate of Incorporation displayed on notice board?",
 ta:"அறிவிப்பு பலகையில் Certificate of Incorporation  காட்டப்பட்டுள்ளதா?/Is Certificate of Incorporation displayed on notice board?",
 kn:"ಸೂಚನಾ ಫಲಕದಲ್ಲಿ  Certificate of Incorporation ಎಂದು ಪ್ರದರ್ಶಿಸಲಾಗಿದೆಯೇ?/Is Certificate of Incorporation displayed on notice board?"},
+
 q3:{hi:"क्या Grievance Redressal Policy  Notice बोर्ड पर प्रदर्शित है?/Is Grievance Redressal Policy on the notice Board?",
 te:"నోటీసు బోర్డులో  Grievance Redressal Policy   ప్రదర్శించబడిందా?/Is Grievance Redressal Policy on the notice Board?",
 ta:"அறிவிப்பு பலகையில் Grievance Redressal Policy  காட்டப்பட்டுள்ளதா?/Is Grievance Redressal Policy on the notice Board?",
 kn:"ಸೂಚನಾ ಫಲಕದಲ್ಲಿ  Grievance Redressal Policy ಎಂದು ಪ್ರದರ್ಶಿಸಲಾಗಿದೆಯೇ?/Is Grievance Redressal Policy on the notice Board?"},
+
 q4:{hi:"क्या Employee Grievance Resolution Policy  Notice बोर्ड पर प्रदर्शित है?/Is Employee Grievance Resolution Policy on the notice Board?",
 te:"నోటీసు బోర్డులో  Employee Grievance Resolution Policy   ప్రదర్శించబడిందా?/Is Employee Grievance Resolution Policy on the notice Board?",
 ta:"அறிவிப்பு பலகையில் Employee Grievance Resolution Policy  காட்டப்பட்டுள்ளதா?/Is Employee Grievance Resolution Policy on the notice Board?",
 kn:"ಸೂಚನಾ ಫಲಕದಲ್ಲಿ  Employee Grievance Resolution Policy ಎಂದು ಪ್ರದರ್ಶಿಸಲಾಗಿದೆಯೇ?/Is Employee Grievance Resolution Policy on the notice Board?"},
+
 q5:{hi:"क्या Collection code of conduct  Notice बोर्ड पर प्रदर्शित है?/Is Collection code of conduct on the notice Board?",
 te:"నోటీసు బోర్డులో  Collection code of conduct   ప్రదర్శించబడిందా?/Is Collection code of conduct on the notice Board?",
 ta:"அறிவிப்பு பலகையில் Collection code of conduct  காட்டப்பட்டுள்ளதா?/Is Collection code of conduct on the notice Board?",
 kn:"ಸೂಚನಾ ಫಲಕದಲ್ಲಿ  Collection code of conduct ಎಂದು ಪ್ರದರ್ಶಿಸಲಾಗಿದೆಯೇ?/Is Collection code of conduct on the notice Board?"},
+
 q6:{hi:"क्या Whistle Blower Policy  Notice बोर्ड पर प्रदर्शित है?/Is Whistle Blower Policy on the notice Board?",
 te:"నోటీసు బోర్డులో  Whistle Blower Policy   ప్రదర్శించబడిందా?/Is Whistle Blower Policy on the notice Board?",
 ta:"அறிவிப்பு பலகையில் Whistle Blower Policy  காட்டப்பட்டுள்ளதா?/Is Whistle Blower Policy on the notice Board?",
 kn:"ಸೂಚನಾ ಫಲಕದಲ್ಲಿ  Whistle Blower Policy ಎಂದು ಪ್ರದರ್ಶಿಸಲಾಗಿದೆಯೇ?/Is Whistle Blower Policy on the notice Board?"},
+
 q7:{hi:"क्या Code of conduct  Notice बोर्ड पर प्रदर्शित है?/Is Code of conduct on the notice Board?",
 te:"నోటీసు బోర్డులో  Code of conduct   ప్రదర్శించబడిందా?/Is Code of conduct on the notice Board?",
 ta:"அறிவிப்பு பலகையில் Code of conduct  காட்டப்பட்டுள்ளதா?/Is Code of conduct on the notice Board?",
 kn:"ಸೂಚನಾ ಫಲಕದಲ್ಲಿ  Code of conduct ಎಂದು ಪ್ರದರ್ಶಿಸಲಾಗಿದೆಯೇ?/Is Code of conduct on the notice Board?"},
+
 q8:{hi:"क्या Quality Policy  Notice बोर्ड पर प्रदर्शित है?/Is Quality Policy on the notice Board?",
 te:"నోటీసు బోర్డులో  Quality Policy   ప్రదర్శించబడిందా?/Is Quality Policy on the notice Board?",
 ta:"அறிவிப்பு பலகையில் Quality Policy  காட்டப்பட்டுள்ளதா?/Is Quality Policy on the notice Board?",
 kn:"ಸೂಚನಾ ಫಲಕದಲ್ಲಿ  Quality Policy ಎಂದು ಪ್ರದರ್ಶಿಸಲಾಗಿದೆಯೇ?/Is Quality Policy on the notice Board?"},
+
 q9:{hi:"क्या Sexual Harassment policy  Notice बोर्ड पर प्रदर्शित है?/Is Sexual Harassment policy on the notice Board?",
 te:"నోటీసు బోర్డులో  Sexual Harassment policy   ప్రదర్శించబడిందా?/Is Sexual Harassment policy on the notice Board?",
 ta:"அறிவிப்பு பலகையில் Sexual Harassment policy  காட்டப்பட்டுள்ளதா?/Is Sexual Harassment policy on the notice Board?",
 kn:"ಸೂಚನಾ ಫಲಕದಲ್ಲಿ  Sexual Harassment policy ಎಂದು ಪ್ರದರ್ಶಿಸಲಾಗಿದೆಯೇ?/Is Sexual Harassment policy on the notice Board?"},
+
 q10:{hi:"क्या Fair Practice Code  Notice बोर्ड पर प्रदर्शित है?/Is Fair Practice Code on the notice Board?",
 te:"నోటీసు బోర్డులో  Fair Practice Code   ప్రదర్శించబడిందా?/Is Fair Practice Code on the notice Board?",
 ta:"அறிவிப்பு பலகையில் Fair Practice Code  காட்டப்பட்டுள்ளதா?/Is Fair Practice Code on the notice Board?",
 kn:"ಸೂಚನಾ ಫಲಕದಲ್ಲಿ  Fair Practice Code ಎಂದು ಪ್ರದರ್ಶಿಸಲಾಗಿದೆಯೇ?/Is Fair Practice Code on the notice Board?"},
+
 q11:{hi:"क्या Consumer Education Literature on SMA, NPA Classification and Upgradation  Notice बोर्ड पर प्रदर्शित है?/Is Consumer Education Literature on SMA, NPA Classification and Upgradation on the notice Board?",
 te:"నోటీసు బోర్డులో  Consumer Education Literature on SMA, NPA Classification and Upgradation   ప్రదర్శించబడిందా?/Is Consumer Education Literature on SMA, NPA Classification and Upgradation on the notice Board?",
 ta:"அறிவிப்பு பலகையில் Consumer Education Literature on SMA, NPA Classification and Upgradation  காட்டப்பட்டுள்ளதா?/Is Consumer Education Literature on SMA, NPA Classification and Upgradation on the notice Board?",
 kn:"ಸೂಚನಾ ಫಲಕದಲ್ಲಿ  Consumer Education Literature on SMA, NPA Classification and Upgradation ಎಂದು ಪ್ರದರ್ಶಿಸಲಾಗಿದೆಯೇ?/Is Consumer Education Literature on SMA, NPA Classification and Upgradation on the notice Board?"},
+
 q12:{hi:"क्या Customer Grievance Redressal Mechanism  Notice बोर्ड पर प्रदर्शित है?/Is Customer Grievance Redressal Mechanism on the notice Board?",
 te:"నోటీసు బోర్డులో  Customer Grievance Redressal Mechanism   ప్రదర్శించబడిందా?/Is Customer Grievance Redressal Mechanism on the notice Board?",
 ta:"அறிவிப்பு பலகையில் Customer Grievance Redressal Mechanism  காட்டப்பட்டுள்ளதா?/Is Customer Grievance Redressal Mechanism on the notice Board?",
 kn:"ಸೂಚನಾ ಫಲಕದಲ್ಲಿ  Customer Grievance Redressal Mechanism ಎಂದು ಪ್ರದರ್ಶಿಸಲಾಗಿದೆಯೇ?/Is Customer Grievance Redressal Mechanism on the notice Board?"},
+
 q13:{hi:"क्या Ombudsman certificate ( 3 languages)  Notice बोर्ड पर प्रदर्शित है?/Is Ombudsman certificate ( 3 languages) on the notice Board?",
 te:"నోటీసు బోర్డులో  Ombudsman certificate ( 3 languages)   ప్రదర్శించబడిందా?/Is Ombudsman certificate ( 3 languages) on the notice Board?",
 ta:"அறிவிப்பு பலகையில் Ombudsman certificate ( 3 languages)  காட்டப்பட்டுள்ளதா?/Is Ombudsman certificate ( 3 languages) on the notice Board?",
 kn:"ಸೂಚನಾ ಫಲಕದಲ್ಲಿ  Ombudsman certificate ( 3 languages) ಎಂದು ಪ್ರದರ್ಶಿಸಲಾಗಿದೆಯೇ?/Is Ombudsman certificate ( 3 languages) on the notice Board?"},
+
 q14:{hi:"क्या S&E certificate  Notice बोर्ड पर प्रदर्शित है?/Is S&E certificate on the notice Board?",
 te:"నోటీసు బోర్డులో  S&E certificate   ప్రదర్శించబడిందా?/Is S&E certificate on the notice Board?",
 ta:"அறிவிப்பு பலகையில் S&E certificate  காட்டப்பட்டுள்ளதா?/Is S&E certificate on the notice Board?",
 kn:"ಸೂಚನಾ ಫಲಕದಲ್ಲಿ  S&E certificate ಎಂದು ಪ್ರದರ್ಶಿಸಲಾಗಿದೆಯೇ?/Is S&E certificate on the notice Board?"},
+
 q15:{hi:"क्या GSTN certificate  Notice बोर्ड पर प्रदर्शित है?/Is GSTN certificate on the notice Board?",
 te:"నోటీసు బోర్డులో  GSTN certificate   ప్రదర్శించబడిందా?/Is GSTN certificate on the notice Board?",
 ta:"அறிவிப்பு பலகையில் GSTN certificate  காட்டப்பட்டுள்ளதா?/Is GSTN certificate on the notice Board?",
 kn:"ಸೂಚನಾ ಫಲಕದಲ್ಲಿ  GSTN certificate ಎಂದು ಪ್ರದರ್ಶಿಸಲಾಗಿದೆಯೇ?/Is GSTN certificate on the notice Board?"},
+
 q16:{hi:"क्या Holiday List  Notice बोर्ड पर प्रदर्शित है?/Is Holiday List on the notice Board?",
 te:"నోటీసు బోర్డులో  Holiday List   ప్రదర్శించబడిందా?/Is Holiday List on the notice Board?",
 ta:"அறிவிப்பு பலகையில் Holiday List  காட்டப்பட்டுள்ளதா?/Is Holiday List on the notice Board?",
 kn:"ಸೂಚನಾ ಫಲಕದಲ್ಲಿ  Holiday List ಎಂದು ಪ್ರದರ್ಶಿಸಲಾಗಿದೆಯೇ?/Is Holiday List on the notice Board?"},
+
 q17:{hi:"क्या Trade License  Notice बोर्ड पर प्रदर्शित है?/Is Trade License on the notice Board?",
 te:"నోటీసు బోర్డులో  Trade License   ప్రదర్శించబడిందా?/Is Trade License on the notice Board?",
 ta:"அறிவிப்பு பலகையில் Trade License  காட்டப்பட்டுள்ளதா?/Is Trade License on the notice Board?",
 kn:"ಸೂಚನಾ ಫಲಕದಲ್ಲಿ  Trade License ಎಂದು ಪ್ರದರ್ಶಿಸಲಾಗಿದೆಯೇ?/Is Trade License on the notice Board?"},
+
 q18:{hi:"क्या ISO certificate  Notice बोर्ड पर प्रदर्शित है?/Is ISO certificate on the notice Board?",
 te:"నోటీసు బోర్డులో  ISO certificate   ప్రదర్శించబడిందా?/Is ISO certificate on the notice Board?",
 ta:"அறிவிப்பு பலகையில் ISO certificate  காட்டப்பட்டுள்ளதா?/Is ISO certificate on the notice Board?",
 kn:"ಸೂಚನಾ ಫಲಕದಲ್ಲಿ  ISO certificate ಎಂದು ಪ್ರದರ್ಶಿಸಲಾಗಿದೆಯೇ?/Is ISO certificate on the notice Board?"},
 
+// Page 2: General querries
 q19:{hi:"क्या Abstracts & Notices लगे हैं?/Abstracts & Notices?",
 te:"Abstracts & Notices ఉన్నాయా?/Abstracts & Notices?",
 ta:"Abstracts & Notices உள்ளதா?/Abstracts & Notices?",
@@ -1027,155 +764,1395 @@ te:"Electrical On/Off Instructions ఉన్నాయా?/Electrical On/Off Inst
 ta:"Electrical On/Off Instructions உள்ளதా?/Electrical On/Off Instructions near location?",
 kn:"Electrical On/Off Instructions ಇದೆಯೇ?/Electrical On/Off Instructions near location?"},
 
+// Page 3: Registers
+q28:{hi:"Customer Complaint Register के आखिरी 2 पन्नों की कम से कम 2 तस्वीरें अपलोड करें।/Upload photo of last 2 pages of  Customer Complaint Register",
+te:"Customer Complaint Register యొక్క చివరి 2 పేజీల యొక్క కనీసం 2 ఫోటోలను అప్‌లోడ్ చేయండి./Upload photo of last 2 pages of  Customer Complaint Register",
+ta:"Customer Complaint Register இன் கடைசிப் பக்கத்தின் குறைந்தபட்சம் 2 புகைப்படங்களைப் பதிவேற்றவும்./Upload photo of last 2 pages of  Customer Complaint Register",
+kn:"Customer Complaint Register ನ ಕೊನೆಯ ಪುಟದ ಕನಿಷ್ಠ 2 ಫೋಟೋಗಳನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಿ./Upload photo of last 2 pages of  Customer Complaint Register"},
+
+q29:{hi:"Office Opening & Closing Register के आखिरी 2 पन्नों की कम से कम 2 तस्वीरें अपलोड करें।/Upload photo of last 2 pages of  Office Opening & Closing Register",
+te:"Office Opening & Closing Register యొక్క చివరి 2 పేజీల యొక్క కనీసం 2 ఫోటోలను అప్‌లోడ్ చేయండి./Upload photo of last 2 pages of  Office Opening & Closing Register",
+ta:"Office Opening & Closing Register இன் கடைசிப் பக்கத்தின் குறைந்தபட்சம் 2 புகைப்படங்களைப் பதிவேற்றவும்./Upload photo of last 2 pages of  Office Opening & Closing Register",
+kn:"Office Opening & Closing Register ನ ಕೊನೆಯ ಪುಟದ ಕನಿಷ್ಠ 2 ಫೋಟೋಗಳನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಿ./Upload photo of last 2 pages of  Office Opening & Closing Register"},
+
+q30:{hi:"Visitor Register के आखिरी 2 पन्नों की कम से कम 2 तस्वीरें अपलोड करें।/Upload photo of last 2 pages of  Visitor Register",
+te:"Visitor Register యొక్క చివరి 2 పేజీల యొక్క కనీసం 2 ఫోటోలను అప్‌లోడ్ చేయండి./Upload photo of last 2 pages of  Visitor Register",
+ta:"Visitor Register இன் கடைசிப் பக்கத்தின் குறைந்தபட்சம் 2 புகைப்படங்களைப் பதிவேற்றவும்./Upload photo of last 2 pages of  Visitor Register",
+kn:"Visitor Register ನ ಕೊನೆಯ ಪುಟದ ಕನಿಷ್ಠ 2 ಫೋಟೋಗಳನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಿ./Upload photo of last 2 pages of  Visitor Register"},
+
+q31:{hi:"Courier inward Register के आखिरी 2 पन्नों की कम से कम 2 तस्वीरें अपलोड करें।/Upload photo of last 2 pages of  Courier inward Register",
+te:"Courier inward Register యొక్క చివరి 2 పేజీల యొక్క కనీసం 2 ఫోటోలను అప్‌లోడ్ చేయండి./Upload photo of last 2 pages of  Courier inward Register",
+ta:"Courier inward Register இன் கடைசிப் பக்கத்தின் குறைந்தபட்சம் 2 புகைப்படங்களைப் பதிவேற்றவும்./Upload photo of last 2 pages of  Courier inward Register",
+kn:"Courier inward Register ನ ಕೊನೆಯ ಪುಟದ ಕನಿಷ್ಠ 2 ಫೋಟೋಗಳನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಿ./Upload photo of last 2 pages of  Courier inward Register"},
+
+q32:{hi:"Courier outward Register के आखिरी 2 पन्नों की कम से कम 2 तस्वीरें अपलोड करें।/Upload photo of last 2 pages of  Courier outward Register",
+te:"Courier outward Register యొక్క చివరి 2 పేజీల యొక్క కనీసం 2 ఫోటోలను అప్‌లోడ్ చేయండి./Upload photo of last 2 pages of  Courier outward Register",
+ta:"Courier outward Register இன் கடைசிப் பக்கத்தின் குறைந்தபட்சம் 2 புகைப்படங்களைப் பதிவேற்றவும்./Upload photo of last 2 pages of  Courier outward Register",
+kn:"Courier outward Register ನ ಕೊನೆಯ ಪುಟದ ಕನಿಷ್ಠ 2 ಫೋಟೋಗಳನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಿ./Upload photo of last 2 pages of  Courier outward Register"},
+
+q33:{hi:"Material Inward Register के आखिरी 2 पन्नों की कम से कम 2 तस्वीरें अपलोड करें।/Upload photo of last 2 pages of  Material Inward Register",
+te:"Material Inward Register యొక్క చివరి 2 పేజీల యొక్క కనీసం 2 ఫోటోలను అప్‌లోడ్ చేయండి./Upload photo of last 2 pages of  Material Inward Register",
+ta:"Material Inward Register இன் கடைசிப் பக்கத்தின் குறைந்தபட்சம் 2 புகைப்படங்களைப் பதிவேற்றவும்./Upload photo of last 2 pages of  Material Inward Register",
+kn:"Material Inward Register ನ ಕೊನೆಯ ಪುಟದ ಕನಿಷ್ಠ 2 ಫೋಟೋಗಳನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಿ./Upload photo of last 2 pages of  Material Inward Register"},
+
+q34:{hi:"Material Outward Register के आखिरी 2 पन्नों की कम से कम 2 तस्वीरें अपलोड करें।/Upload photo of last 2 pages of  Material Outward Register",
+te:"Material Outward Register యొక్క చివరి 2 పేజీల యొక్క కనీసం 2 ఫోటోలను అప్‌లోడ్ చేయండి./Upload photo of last 2 pages of  Material Outward Register",
+ta:"Material Outward Register இன் கடைசிப் பக்கத்தின் குறைந்தபட்சம் 2 புகைப்படங்களைப் பதிவேற்றவும்./Upload photo of last 2 pages of  Material Outward Register",
+kn:"Material Outward Register ನ ಕೊನೆಯ ಪುಟದ ಕನಿಷ್ಠ 2 ಫೋಟೋಗಳನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಿ./Upload photo of last 2 pages of  Material Outward Register"},
+
+q35:{hi:"Key Register के आखिरी 2 पन्नों की कम से कम 2 तस्वीरें अपलोड करें।/Upload photo of last 2 pages of  Key Register",
+te:"Key Register యొక్క చివరి 2 పేజీల యొక్క కనీసం 2 ఫోటోలను అప్‌లోడ్ చేయండి./Upload photo of last 2 pages of  Key Register",
+ta:"Key Register இன் கடைசிப் பக்கத்தின் குறைந்தபட்சம் 2 புகைப்படங்களைப் பதிவேற்றவும்./Upload photo of last 2 pages of  Key Register",
+kn:"Key Register ನ ಕೊನೆಯ ಪುಟದ ಕನಿಷ್ಠ 2 ಫೋಟೋಗಳನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಿ./Upload photo of last 2 pages of  Key Register"},
+
+q36:{hi:"Stationery Register के आखिरी 2 पन्नों की कम से कम 2 तस्वीरें अपलोड करें।/Upload photo of last 2 pages of  Stationery Register",
+te:"Stationery Register యొక్క చివరి 2 పేజీల యొక్క కనీసం 2 ఫోటోలను అప్‌లోడ్ చేయండి./Upload photo of last 2 pages of  Stationery Register",
+ta:"Stationery Register இன் கடைசிப் பக்கத்தின் குறைந்தபட்சம் 2 புகைப்படங்களைப் பதிவேற்றவும்./Upload photo of last 2 pages of  Stationery Register",
+kn:"Stationery Register ನ ಕೊನೆಯ ಪುಟದ ಕನಿಷ್ಠ 2 ಫೋಟೋಗಳನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಿ./Upload photo of last 2 pages of  Stationery Register"},
+
+q37:{hi:"branch के अंदर washroom है?/washroom inside the branch",
+te:"branch లోపల washroom ఉంది?/is there washroom inside the branch",
+ta:"branch உள்ளே washroom உள்ளது?/is there washroom inside the branch",
+kn:"branch ಒಳಗೆ washroom ಇದೆ?/is there washroom inside the branch"},
+
+// Page 4: HR
+q38:{hi:"HR Documents के सभी pages की फोटो अपलोड करें/Upload photo of all pages of  HR Documents",
+te:"HR Documents యొక్క అన్ని పేజీల ఫోటోలను అప్‌లోడ్ చేయండి./Upload photo of all pages of  HR Documents",
+ta:"HR Documents இன் அனைத்து Pages புகைப்படங்களையும் பதிவேற்றவும்./Upload photo of all pages of  HR Documents",
+kn:"HR Documents ನ ಎಲ್ಲಾ ಪುಟಗಳ ಫೋಟೋಗಳನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಿ./Upload photo of all pages of  HR Documents"},
+
+
+// Page 5: Branch Info
+q39:{hi:"Branch में कितने AC हैं?/How Many AC are there in the branch?",
+te:"బ్రాంచ్ లో ఎన్ని ACలు ఉన్నాయి?/How Many AC are there in the branch?",
+ta:"கிளையில் எத்தனை ஏசிகள் உள்ளன?/How Many AC are there in the branch?",
+kn:"ಬ್ರಾಂಚ್‌ನಲ್ಲಿ ಎಷ್ಟು ಎಸಿಗಳಿವೆ?/How Many AC are there in the branch?"},
+
+q40:{hi:"बायोमेट्रिक मशीन काम कर रही है/Biometric machine working?",
+te:"బయోమెట్రిక్ మెషిన్ పనిచేస్తుందా?/Biometric machine working?",
+ta:"பயோமெట্রিক இயந்திரம் வேலை செய்கிறதா?/Biometric machine working?",
+kn:"ಬಯೋಮೆಟ್ರಿಕ್ ಯಂತ್ರ ಕೆಲಸ ಮಾಡುತ್ತಿದೆಯೇ?}/Biometric machine working?"},
+
+q41:{hi:"बायोमेट्रिक लॉक काम कर रहा है?/Biometric Lock working?",
+te:"బయోమెట్రిక్ లాక్ పనిచేస్తుందా?/Biometric Lock working?",
+ta:"பயோமெட்ட্রিক லாக் வேலை செய்கிறதா?/Biometric Lock working?",
+kn:"ಬಯೋಮೆಟ್ರಿಕ್ ಲಾಕ್ ಕೆಲಸ ಮಾಡುತ್ತಿದೆಯೇ?/Biometric Lock working?"},
+
+
+
+// Page 6: Fixed Assets Register
+q42:{hi:"सभी fixed asset code की फोटो अपलोड करें/upload photo of all fixed asset code",
+te:"అన్ని fixed asset code ఫోటోలను అప్‌లోడ్ చేయండి/upload photo of all fixed asset code",
+ta:"fixed asset code புகைப்படங்கள் அனைத்தையும் பதிவேற்று./upload photo of all fixed asset code",
+kn:"ಎಲ್ಲಾ fixed asset code ಫೋಟೋಗಳನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಿ/upload photo of all fixed asset code"}
+
+};
+const branchMap = {
+"Andhra Pradesh":["Tirupati","Vijayawada","Visakhapatnam"],
+"Telangana":["Hyderabad"],
+"Tamil Nadu":["Chennai","Coimbatore","Madurai","Salem","Tirupur","Tiruvallur"],
+"Karnataka":["Bangalore","Belgaum","Gulbarga","Hubballi","Mangalore","Mysore","Tumkur"],
+"Delhi":["Delhi"],
+"Gujarat":["Ahmedabad","Baroda","Rajkot","Surat"],
+"Maharashtra":["Aurangabad","Borivali","Kolhapur","Nagpur","Nashik","Pune","Thane"],
+"Rajasthan":["Ajmer","Jaipur","Jodhpur","Sikar","Udaipur"],
+"Uttar Pradesh":["Lucknow"],
+"West Bengal":["Kolkata"],
+"Punjab":["Jalandhar","Ludhiana"],
+"Haryana":["Panipat"],
+"Madhya Pradesh":["Bhopal","Gwalior","Indore"],
+"Odisha":["Bhubaneswar"],
+"Puducherry":["Puducherry"],
+"Jharkhand":["Jamshedpur"],
+"Chandigarh":["Chandigarh"]
 };
 
-const STATE_LANG={
-"Andhra Pradesh":"te","Telangana":"te",
-"Tamil Nadu":"ta","Karnataka":"kn",
-"Delhi":"hi","Gujarat":"hi","Maharashtra":"hi",
-"Rajasthan":"hi","Uttar Pradesh":"hi","West Bengal":"hi",
-"Punjab":"hi","Haryana":"hi","Madhya Pradesh":"hi",
-"Odisha":"hi","Puducherry":"ta","Jharkhand":"hi","Chandigarh":"hi"
-};
+const trade = ["Bhubaneswar","Hyderabad","Kolkata","Puducherry","Tirupati"];
+const iso   = ["Bangalore","Chennai","Delhi","Hyderabad","Jaipur","Pune","Kolkata","Coimbatore","Ahmedabad"];
 
-// Is variable ko function ke bahar rakhein taaki submitForm ise use kar sake
-let currentMessages = {}; 
+/* ================= GLOBALS ================= */
+let currentPage = 1;
+let lang = "en";
+let submissionId = localStorage.getItem("submissionId") || "";
+const stateEl = document.getElementById("state");
+const branchEl = document.getElementById("branch");
 
-function applyLanguage(){
- const stateEl = document.getElementById("state");
-const lang = (!stateEl || stateEl.value === "") ? "hi" : (STATE_LANG[stateEl.value] || "hi");
- 
- // 1. Sawaal translate karein
- Object.keys(QUESTIONS).forEach(q=>{
-   const el = document.getElementById(q+"Text");
-   if(el) el.innerText = QUESTIONS[q][lang];
- });
-
- // 2. Labels aur Buttons ke translations
- const msgLabels = {
-   hi: {
-     y: "हाँ / Yes", n: "नहीं / No",
-     next: "save और आगे बढ़ें / Save & Next",
-    back: "पीछे जाएं / Back",
-     photo: "फोटो अपलोड करें। / UPLOAD PHOTO!",
-     date: "Date ठीक करें / WRONG DATE!",
-     version: "कृपया Version No भरें / Please enter Version No!",
-     // ✅ ADDED
-     firstAidTip: "सारी दवाइयाँ एक साथ रखें ताकि सभी expiry dates दिखें, फिर फोटो क्लिक करें। / Arrange all the medicines next to each other so expiry date of all medicines is visible and then click the photo.",
-     selectCount: "कृपया Fire Extinguisher की संख्या चुनें (max 15). / Please select number of Fire Extinguishers (max 15).",
-     pending: "कृपया सारी जानकारी भरें (लाल रंग में हाईलाइट किया गया)। / fill all details (highlighted in red).",
-     success: "Report सबमिट हो गया है! / Report Submitted successfully.",
-     wait: "कृपया प्रतीक्षा करें, डेटा भेजा जा रहा है…",
-   },
-   te: {
-     y: "అవును / Yes", n: "కాదు / No",
-    next: "సేవ్ చేసి కొనసాగండి / Save & Next",
-    back: "మునుపటి పేజీకి వెళ్ళండి / Back",
-     photo: "ఫోటోను అప్‌లోడ్ చేయండి / UPLOAD PHOTO!",
-     date: "తేదీని నిర్ణయించండి / INVALID DATE!",
-     version: "దయచేసి version no ని నమోదు చేయండి / Please enter Version No!",
-     pending: "దయచేసి అన్ని వివరాలను పూరించండి (ఎరుపు రంగులో హైలైట్ చేయబడింది). / Please fill all details (highlighted in red).",
-     success: "నివేదిక విజయవంతంగా సమర్పించబడింది. / Report Submitted successfully.",
-     wait: "దయచేసి వేచి ఉండండి, డేటా పంపబడుతోంది…",
-   },
-   ta: {
-     y: "ஆம் / Yes", n: "இல்லை / No",
-       next: "சேமித்து தொடரவும் / Save & Next",
-    back: "முந்தைய பக்கத்திற்கு செல்லவும் / Back",
-     photo: "புகைப்படத்தை பதிவேற்றவும் / UPLOAD PHOTO!",
-     date: "தேதியை நிர்ணயிக்கவும் / INVALID DATE!",
-     version: "version no ஐ உள்ளிடவும். / Please enter Version No!",
-     pending: "தயவுசெய்து அனைத்து விவரங்களையும் நிரப்பவும் (சிவப்பு நிறத்தில் சிறப்பிக்கப்பட்டுள்ளது). / Please fill all details (highlighted in red).",
-     success: "அறிக்கை வெற்றிகரமாக சமர்ப்பிக்கப்பட்டது./ Report Submitted successfully.",
-     wait: "தயவுசெய்து காத்திருக்கவும், தரவு அனுப்பப்படுகிறது…",
-   },
-   kn: {
-     y: "ಹೌದು / Yes", n: "ಇಲ್ಲ / No",
-       next: "ಉಳಿಸಿ ಮತ್ತು ಮುಂದುವರೆಯಿರಿ / Save & Next",
-    back: "ಹಿಂದಿನ ಪುಟಕ್ಕೆ ಹೋಗಿ / Back",
-     photo: "ಫೋಟೋ ಅಪ್ಲೋಡ್ / UPLOAD PHOTO!",
-     date: "ದಿನಾಂಕವನ್ನು ನಿಗದಿಪಡಿಸಿ / INVALID DATE!",
-     version: "ದಯವಿಟ್ಟು version no ನಮೂದಿಸಿ / Please enter Version No!",
-     pending: "ದಯವಿಟ್ಟು ಎಲ್ಲಾ ವಿವರಗಳನ್ನು ಭರ್ತಿ ಮಾಡಿ (ಕೆಂಪು ಬಣ್ಣದಲ್ಲಿ ಹೈಲೈಟ್ ಮಾಡಲಾಗಿದೆ). / Please fill all details (highlighted in red).",
-     success: "ವರದಿಯನ್ನು ಯಶಸ್ವಿಯಾಗಿ ಸಲ್ಲಿಸಲಾಗಿದೆ. / Report Submitted successfully.",
-     wait: "ದಯವಿಟ್ಟು ಕಾಯಿರಿ, ಡೇಟಾ ಕಳುಹಿಸಲಾಗುತ್ತಿದೆ…",
-   }
- };
-
- currentMessages = msgLabels[lang];
-  // Back aur Next buttons translate karein
-document.querySelectorAll(".btn-back").forEach(b => 
-  b.innerText = currentMessages.back || "Back"
-);
-
-document.querySelectorAll(".btn-next").forEach(b => 
-  b.innerText = currentMessages.next || "Save & Next"
-);
-
- // 3. Yes/No aur Button translate karein
- document.querySelectorAll(".yesText").forEach(el => el.innerText = currentMessages.y);
- document.querySelectorAll(".noText").forEach(el => el.innerText = currentMessages.n);
- 
- const btnLabel = document.getElementById("btnText");
- if(btnLabel) btnLabel.innerText = currentMessages.submit;
-
- // ✅ ADDED: Page2 tip + label translation
- const tip = document.getElementById("q21Tip");
- if (tip) tip.innerText = currentMessages.firstAidTip || "";
-
- const cLab = document.getElementById("q25CountLabel");
- if (cLab) cLab.innerText = currentMessages.selectCount || cLab.innerText;
+/* ================= UTIL: labels (no hardcode messages) ================= */
+function L(key){
+  return (msgLabels?.[lang]?.[key] ?? msgLabels?.["en"]?.[key] ?? "");
 }
-  
-  // Photo preview dikhane ke liye ye function zaroori hai
-function showPreview(event, imgId) {
-  const file = event.target.files[0];
-  const preview = document.getElementById(imgId);
-  
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      preview.src = e.target.result;
-      preview.style.display = "block"; // Image select hote hi dikh jayegi
-    };
-    reader.readAsDataURL(file);
+function setText(id, txt){ const el=document.getElementById(id); if(el) el.textContent = txt ?? ""; }
+
+/* ================= SECTION: BUTTONS / NAV ================= */
+function setButtons(){
+  for(let p=1;p<=6;p++){
+    const back = document.getElementById("back"+p);
+    const next = document.getElementById("next"+p);
+    if(back) back.textContent = L("back");
+    if(next){
+      const isLast = (p===6);
+      // Prefer submit label on last page if available; else "next"
+      next.textContent = isLast ? (L("submit") || L("next")) : L("next");
+    }
+    if(back) back.onclick = ()=>onBack();
+    if(next) next.onclick = ()=>onSubmitNext();
   }
 }
-  function showPreview(event, imgId) {
-  const file = event.target.files[0];
-  const preview = document.getElementById(imgId);
-  
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      preview.src = e.target.result;
-      preview.style.display = "block"; // Image select hone par dikhayen
+function showPage(p){
+  currentPage = Number(p);
+  document.querySelectorAll(".form-page").forEach(pg=>pg.classList.remove("active"));
+  const el = document.getElementById("page"+currentPage);
+  if(el) el.classList.add("active");
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+function onBack(){
+  if(currentPage<=1) return;
+  showPage(currentPage-1);
+}
+
+/* ================= SECTION: PAGE RENDER ================= */
+function renderAll(){
+  // top texts (optional keys if you have)
+  setText("topTitle", L("title") || "");
+  setText("topSub", L("subtitle") || "");
+
+  // labels for basic fields (use your msgLabels keys if present; else blank)
+  setText("lblState", L("state") || "");
+  setText("lblBranch", L("branch") || "");
+  setText("lblBranchHead", L("branchHead") || "");
+  setText("lblOfficeBoy", L("officeBoy") || "");
+
+  renderStateDropdown();
+  renderBranchDropdown();
+
+  renderPageQuestions();
+  setButtons();
+}
+
+function renderStateDropdown(){
+  // no hardcoded placeholder text; first option blank
+  stateEl.innerHTML = "";
+  const opt0 = document.createElement("option");
+  opt0.value = "";
+  opt0.textContent = L("selectState") || "";
+  stateEl.appendChild(opt0);
+
+  const states = Object.keys(branchMap || {});
+  states.forEach(st=>{
+    const o=document.createElement("option");
+    o.value=st; o.textContent=st; // state names are data, not UI labels
+    stateEl.appendChild(o);
+  });
+
+  stateEl.onchange = ()=>{
+    lang = (STATE_LANG?.[stateEl.value] || "en");
+    renderAll(); // re-render texts + questions
+  };
+}
+function renderBranchDropdown(){
+  branchEl.innerHTML = "";
+  const opt0 = document.createElement("option");
+  opt0.value = "";
+  opt0.textContent = L("selectBranch") || "";
+  branchEl.appendChild(opt0);
+
+  const branches = (branchMap?.[stateEl.value] || []);
+  branches.forEach(b=>{
+    const o=document.createElement("option");
+    o.value=b; o.textContent=b;
+    branchEl.appendChild(o);
+  });
+
+  branchEl.onchange = ()=>{
+    // trade/iso + Q42 assets depend on branch
+    renderPageQuestions();
+  };
+}
+
+function renderPageQuestions(){
+  // Page 1: q1-q18 (q17/q18 conditional)
+  const p1 = [];
+  for(let i=1;i<=18;i++) p1.push("q"+i);
+  // Page 2: q19-q27
+  const p2 = [];
+  for(let i=19;i<=27;i++) p2.push("q"+i);
+  // Page 3: q28-q37
+  const p3 = [];
+  for(let i=28;i<=37;i++) p3.push("q"+i);
+  // Page 4: q38 only
+  const p4 = ["q38"];
+  // Page 5: q39-q41
+  const p5 = ["q39","q40","q41"];
+  // Page 6: q42 (assets)
+  const p6 = ["q42"];
+
+  renderQuestionList("qWrap1", p1, 1);
+  renderQuestionList("qWrap2", p2, 2);
+  renderQuestionList("qWrap3", p3, 3);
+  renderQuestionList("qWrap4", p4, 4);
+  renderQuestionList("qWrap5", p5, 5);
+  renderQuestionList("qWrap6", p6, 6);
+}
+
+function shouldShowQuestion(qid){
+  const br = branchEl.value || "";
+  if(qid==="q17") return trade.includes(br);
+  if(qid==="q18") return iso.includes(br);
+  return true;
+}
+
+function qText(qid){
+  // QUESTIONS[qid][lang] expected; else fallback en; else qid
+  return (QUESTIONS?.[qid]?.[lang] ?? QUESTIONS?.[qid]?.["en"] ?? qid);
+}
+
+/* ---- question type mapping by q-number ranges ---- */
+const YN_PHOTO = new Set(["q1","q2","q11","q12","q13","q14","q15","q16","q19","q20","q22","q23","q26","q27","q40","q41","q17","q18"]);
+const POLICY = new Set(["q3","q4","q5","q6","q7","q8","q9","q10"]);
+const MULTI_1_5 = new Set(["q21","q24","q28","q29","q30","q31","q32","q33","q34","q35","q37"]);
+const FIRE = "q25";
+const HR = "q38";
+const AC = "q39";
+const ASSETS = "q42";
+
+function renderQuestionList(wrapId, qids, pageNo){
+  const wrap = document.getElementById(wrapId);
+  wrap.innerHTML = "";
+
+  qids.forEach(qid=>{
+    if(!shouldShowQuestion(qid)) return;
+
+    if(qid===ASSETS){
+      wrap.appendChild(renderAssetsQ42());
+      return;
+    }
+    if(qid===HR){
+      wrap.appendChild(renderHRQ38());
+      return;
+    }
+    if(qid===FIRE){
+      wrap.appendChild(renderFireQ25());
+      return;
+    }
+    if(qid===AC){
+      wrap.appendChild(renderACQ39());
+      return;
+    }
+
+    const isPolicy = POLICY.has(qid);
+    const isMulti = MULTI_1_5.has(qid);
+    const isYnPhoto = YN_PHOTO.has(qid);
+
+    if(isPolicy) wrap.appendChild(renderPolicy(qid));
+    else if(isMulti) wrap.appendChild(renderMultiPhoto(qid, 1, 5));
+    else if(isYnPhoto) wrap.appendChild(renderYnPhoto(qid, 1, 1));
+    else {
+      // default safest: Yes/No only (no extra)
+      wrap.appendChild(renderYnOnly(qid));
+    }
+  });
+}
+
+/* ---- UI builders ---- */
+function qBoxBase(qid){
+  const box = document.createElement("div");
+  box.className = "q";
+  box.id = "box_"+qid;
+
+  const t = document.createElement("div");
+  t.className = "q-title";
+  t.textContent = qText(qid);
+  box.appendChild(t);
+
+  const err = document.createElement("div");
+  err.className = "err-msg";
+  err.id = "err_"+qid;
+  box.appendChild(err);
+
+  return box;
+}
+function setErr(qid, msg){
+  const box = document.getElementById("box_"+qid);
+  const err = document.getElementById("err_"+qid);
+  if(box) box.classList.toggle("err", !!msg);
+  if(err) err.textContent = msg || "";
+}
+function radiosYesNo(qid, onChange){
+  const r = document.createElement("div");
+  r.className = "radios";
+
+  const y = document.createElement("label");
+  y.className = "chip";
+  y.innerHTML = `<input type="radio" name="${qid}" value="Y"> <span>${L("y")}</span>`;
+  const n = document.createElement("label");
+  n.className = "chip";
+  n.innerHTML = `<input type="radio" name="${qid}" value="N"> <span>${L("n")}</span>`;
+
+  r.appendChild(y); r.appendChild(n);
+  r.querySelectorAll("input").forEach(inp=>{
+    inp.addEventListener("change", ()=>onChange?.(inp.value));
+  });
+  return r;
+}
+function fileInput(qid, key, multiple, acceptCapture){
+  const inp = document.createElement("input");
+  inp.type = "file";
+  inp.accept = "image/*";
+  if(acceptCapture) inp.setAttribute("capture","environment");
+  if(multiple) inp.multiple = true;
+  inp.id = `${qid}_${key}`;
+  return inp;
+}
+function thumbsArea(qid, key){
+  const div = document.createElement("div");
+  div.className = "thumbs";
+  div.id = `${qid}_${key}_thumbs`;
+  return div;
+}
+function clearThumbs(qid, key){
+  const t = document.getElementById(`${qid}_${key}_thumbs`);
+  if(t) t.innerHTML="";
+}
+async function filesToDataUrls(files){
+  const arr = Array.from(files || []);
+  const out = [];
+  for(const f of arr){
+    const dataUrl = await new Promise((res, rej)=>{
+      const fr = new FileReader();
+      fr.onload = ()=>res(String(fr.result||""));
+      fr.onerror = ()=>rej(fr.error);
+      fr.readAsDataURL(f);
+    });
+    out.push(dataUrl);
+  }
+  return out;
+}
+function renderThumbs(qid, key, dataUrls){
+  const t = document.getElementById(`${qid}_${key}_thumbs`);
+  if(!t) return;
+  t.innerHTML = "";
+  dataUrls.forEach((url, idx)=>{
+    const d = document.createElement("div");
+    d.className = "thumb";
+    d.style.backgroundImage = `url('${url}')`;
+
+    const x = document.createElement("button");
+    x.type = "button";
+    x.className = "x";
+    x.textContent = "×";
+    x.onclick = ()=>{
+      // remove this index
+      const store = getStore();
+      const list = (store?.responses?.[qid]?.[key] || []);
+      list.splice(idx,1);
+      setStore(store);
+      renderThumbs(qid,key,list);
     };
-    reader.readAsDataURL(file);
+    d.appendChild(x);
+    t.appendChild(d);
+  });
+}
+
+/* ---- storage for per-page answers before save ---- */
+function getStore(){
+  try{ return JSON.parse(localStorage.getItem("draft")||"{}"); }catch(e){ return {}; }
+}
+function setStore(obj){
+  localStorage.setItem("draft", JSON.stringify(obj||{}));
+}
+
+/* ---- question renderers ---- */
+function renderYnOnly(qid){
+  const box = qBoxBase(qid);
+  box.appendChild(radiosYesNo(qid, ()=>{
+    const store = getStore();
+    store.responses = store.responses || {};
+    store.responses[qid] = store.responses[qid] || {};
+    store.responses[qid].answer = getRadio(qid);
+    setStore(store);
+    setErr(qid,"");
+  }));
+  restoreRadio(qid);
+  return box;
+}
+
+function renderYnPhoto(qid, minPhotos, maxPhotos){
+  const box = qBoxBase(qid);
+
+  const photoWrap = document.createElement("div");
+  photoWrap.style.display = "none";
+  photoWrap.id = `wrap_${qid}_photo`;
+
+  const lab = document.createElement("div");
+  lab.className = "label";
+  lab.textContent = L("photo");
+  photoWrap.appendChild(lab);
+
+  const inp = fileInput(qid, "photo", maxPhotos>1, true);
+  photoWrap.appendChild(inp);
+
+  const thumbs = thumbsArea(qid, "photos");
+  photoWrap.appendChild(thumbs);
+
+  box.appendChild(radiosYesNo(qid, (val)=>{
+    const show = (val==="Y");
+    photoWrap.style.display = show ? "block" : "none";
+
+    const store = getStore();
+    store.responses = store.responses || {};
+    store.responses[qid] = store.responses[qid] || {};
+    store.responses[qid].answer = val;
+    if(!show) store.responses[qid].photos = [];
+    setStore(store);
+
+    setErr(qid,"");
+    if(!show){ clearThumbs(qid,"photos"); }
+    else{
+      const list = store.responses[qid].photos || [];
+      renderThumbs(qid,"photos",list);
+    }
+  }));
+
+  inp.addEventListener("change", async ()=>{
+    const store = getStore();
+    store.responses = store.responses || {};
+    store.responses[qid] = store.responses[qid] || {};
+    const prev = store.responses[qid].photos || [];
+    const added = await filesToDataUrls(inp.files);
+    const merged = prev.concat(added).slice(0, maxPhotos);
+    store.responses[qid].photos = merged;
+    setStore(store);
+    renderThumbs(qid,"photos",merged);
+    setErr(qid,"");
+    inp.value = "";
+  });
+
+  box.appendChild(photoWrap);
+
+  // restore
+  restoreRadio(qid);
+  const cur = getRadio(qid);
+  photoWrap.style.display = (cur==="Y") ? "block" : "none";
+  const store = getStore();
+  const list = store?.responses?.[qid]?.photos || [];
+  if(cur==="Y") renderThumbs(qid,"photos",list);
+
+  return box;
+}
+
+function renderPolicy(qid){
+  const box = qBoxBase(qid);
+
+  const detail = document.createElement("div");
+  detail.style.display = "none";
+  detail.id = `wrap_${qid}_policy`;
+
+  const inline = document.createElement("div");
+  inline.className = "inline";
+
+  const v = document.createElement("div"); v.className="mini";
+  const vLab = document.createElement("div"); vLab.className="label"; vLab.textContent = L("version");
+  const vInp = document.createElement("input"); vInp.type="number"; vInp.inputMode="numeric"; vInp.id=`${qid}_version`;
+  v.appendChild(vLab); v.appendChild(vInp);
+
+  const i = document.createElement("div"); i.className="mini";
+  const iLab = document.createElement("div"); iLab.className="label"; iLab.textContent = L("issueDate") || L("date");
+  const iInp = document.createElement("input"); iInp.type="date"; iInp.id=`${qid}_issueDate`;
+  i.appendChild(iLab); i.appendChild(iInp);
+
+  const e = document.createElement("div"); e.className="mini";
+  const eLab = document.createElement("div"); eLab.className="label"; eLab.textContent = L("effectiveDate") || L("date");
+  const eInp = document.createElement("input"); eInp.type="date"; eInp.id=`${qid}_effectiveDate`;
+  e.appendChild(eLab); e.appendChild(eInp);
+
+  inline.appendChild(v); inline.appendChild(i); inline.appendChild(e);
+  detail.appendChild(inline);
+
+  const pLab = document.createElement("div"); pLab.className="label"; pLab.textContent = L("photo");
+  detail.appendChild(pLab);
+
+  const pInp = fileInput(qid,"photo",false,true);
+  detail.appendChild(pInp);
+  detail.appendChild(thumbsArea(qid,"photos"));
+
+  box.appendChild(radiosYesNo(qid, (val)=>{
+    const show = (val==="Y");
+    detail.style.display = show ? "block" : "none";
+
+    const store = getStore();
+    store.responses = store.responses || {};
+    store.responses[qid] = store.responses[qid] || {};
+    store.responses[qid].answer = val;
+    if(!show){
+      store.responses[qid].version = "";
+      store.responses[qid].issueDate = "";
+      store.responses[qid].effectiveDate = "";
+      store.responses[qid].photos = [];
+      clearThumbs(qid,"photos");
+    }else{
+      renderThumbs(qid,"photos", store.responses[qid].photos || []);
+    }
+    setStore(store);
+    setErr(qid,"");
+  }));
+
+  function syncPolicy(){
+    const store = getStore();
+    store.responses = store.responses || {};
+    store.responses[qid] = store.responses[qid] || {};
+    store.responses[qid].version = vInp.value || "";
+    store.responses[qid].issueDate = iInp.value || "";
+    store.responses[qid].effectiveDate = eInp.value || "";
+    setStore(store);
+    setErr(qid,"");
+  }
+  vInp.addEventListener("input", syncPolicy);
+  iInp.addEventListener("change", syncPolicy);
+  eInp.addEventListener("change", syncPolicy);
+
+  pInp.addEventListener("change", async ()=>{
+    const store = getStore();
+    store.responses = store.responses || {};
+    store.responses[qid] = store.responses[qid] || {};
+    const added = await filesToDataUrls(pInp.files);
+    store.responses[qid].photos = added.slice(0,1);
+    setStore(store);
+    renderThumbs(qid,"photos",store.responses[qid].photos);
+    setErr(qid,"");
+    pInp.value="";
+  });
+
+  box.appendChild(detail);
+
+  // restore values
+  restoreRadio(qid);
+  const cur = getRadio(qid);
+  detail.style.display = (cur==="Y") ? "block" : "none";
+  const store = getStore();
+  const r = store?.responses?.[qid] || {};
+  vInp.value = r.version || "";
+  iInp.value = r.issueDate || "";
+  eInp.value = r.effectiveDate || "";
+  if(cur==="Y") renderThumbs(qid,"photos", r.photos || []);
+
+  return box;
+}
+
+function renderMultiPhoto(qid, min, max){
+  const box = qBoxBase(qid);
+
+  const wrap = document.createElement("div");
+  wrap.style.display = "none";
+  wrap.id = `wrap_${qid}_multi`;
+
+  const lab = document.createElement("div");
+  lab.className="label";
+  lab.textContent = L("photo");
+  wrap.appendChild(lab);
+
+  const inp = fileInput(qid,"multi",true,true);
+  wrap.appendChild(inp);
+  wrap.appendChild(thumbsArea(qid,"photos"));
+
+  box.appendChild(radiosYesNo(qid, (val)=>{
+    const show = (val==="Y");
+    wrap.style.display = show ? "block" : "none";
+
+    const store=getStore();
+    store.responses = store.responses || {};
+    store.responses[qid] = store.responses[qid] || {};
+    store.responses[qid].answer = val;
+    if(!show){ store.responses[qid].photos=[]; clearThumbs(qid,"photos"); }
+    setStore(store);
+
+    setErr(qid,"");
+    if(show) renderThumbs(qid,"photos", store.responses[qid].photos || []);
+  }));
+
+  inp.addEventListener("change", async ()=>{
+    const store=getStore();
+    store.responses = store.responses || {};
+    store.responses[qid] = store.responses[qid] || {};
+    const prev = store.responses[qid].photos || [];
+    const added = await filesToDataUrls(inp.files);
+    store.responses[qid].photos = prev.concat(added).slice(0,max);
+    setStore(store);
+    renderThumbs(qid,"photos",store.responses[qid].photos);
+    setErr(qid,"");
+    inp.value="";
+  });
+
+  box.appendChild(wrap);
+
+  // restore
+  restoreRadio(qid);
+  const cur = getRadio(qid);
+  wrap.style.display = (cur==="Y") ? "block" : "none";
+  const store=getStore();
+  if(cur==="Y") renderThumbs(qid,"photos", store?.responses?.[qid]?.photos || []);
+
+  return box;
+}
+
+function renderFireQ25(){
+  const qid = "q25";
+  const box = qBoxBase(qid);
+
+  const lab = document.createElement("div");
+  lab.className = "label";
+  lab.textContent = L("selectCount");
+  box.appendChild(lab);
+
+  const sel = document.createElement("select");
+  sel.id = "q25_count";
+  sel.innerHTML = "";
+  const o0 = document.createElement("option");
+  o0.value = "";
+  o0.textContent = L("selectCount") || "";
+  sel.appendChild(o0);
+  for(let i=1;i<=15;i++){
+    const o=document.createElement("option");
+    o.value=String(i); o.textContent=String(i);
+    sel.appendChild(o);
+  }
+  box.appendChild(sel);
+
+  const area = document.createElement("div");
+  area.id = "q25_area";
+  box.appendChild(area);
+
+  sel.addEventListener("change", ()=>{
+    const n = Number(sel.value||0);
+    const store=getStore();
+    store.responses = store.responses || {};
+    store.responses[qid] = store.responses[qid] || {};
+    store.responses[qid].count = n;
+    store.responses[qid].items = store.responses[qid].items || [];
+    store.responses[qid].items = store.responses[qid].items.slice(0,n);
+    while(store.responses[qid].items.length < n){
+      store.responses[qid].items.push({ photo:"", expiryDate:"" });
+    }
+    setStore(store);
+    renderFireItems(n);
+    setErr(qid,"");
+  });
+
+  function renderFireItems(n){
+    area.innerHTML="";
+    for(let i=1;i<=n;i++){
+      const itemBox = document.createElement("div");
+      itemBox.className="q";
+      itemBox.style.margin="10px 0";
+      itemBox.id = `q25_item_${i}`;
+
+      const title = document.createElement("div");
+      title.className="q-title";
+      title.textContent = `${qText("q25")} ${i}`;
+      itemBox.appendChild(title);
+
+      const err = document.createElement("div");
+      err.className="err-msg";
+      err.id = `err_q25_${i}`;
+      itemBox.appendChild(err);
+
+      const pLab = document.createElement("div");
+      pLab.className="label";
+      pLab.textContent = L("photo");
+      itemBox.appendChild(pLab);
+
+      const pInp = document.createElement("input");
+      pInp.type="file";
+      pInp.accept="image/*";
+      pInp.setAttribute("capture","environment");
+      pInp.id = `q25_photo_${i}`;
+      itemBox.appendChild(pInp);
+
+      const t = document.createElement("div");
+      t.className="thumbs";
+      t.id = `q25_photo_${i}_thumbs`;
+      itemBox.appendChild(t);
+
+      const dLab = document.createElement("div");
+      dLab.className="label";
+      dLab.textContent = L("expiryDate") || L("date");
+      itemBox.appendChild(dLab);
+
+      const dInp = document.createElement("input");
+      dInp.type="date";
+      dInp.id = `q25_exp_${i}`;
+      itemBox.appendChild(dInp);
+
+      pInp.addEventListener("change", async ()=>{
+        const store=getStore();
+        const added = await filesToDataUrls(pInp.files);
+        store.responses = store.responses || {};
+        store.responses.q25 = store.responses.q25 || {};
+        store.responses.q25.items = store.responses.q25.items || [];
+        store.responses.q25.items[i-1] = store.responses.q25.items[i-1] || {};
+        store.responses.q25.items[i-1].photo = added[0] || "";
+        setStore(store);
+        renderSingleThumb(`q25_photo_${i}_thumbs`, store.responses.q25.items[i-1].photo, ()=>{
+          const s=getStore();
+          s.responses.q25.items[i-1].photo = "";
+          setStore(s);
+          renderSingleThumb(`q25_photo_${i}_thumbs`, "", ()=>{});
+        });
+        document.getElementById(`err_q25_${i}`).textContent="";
+        itemBox.classList.remove("err");
+        pInp.value="";
+      });
+
+      dInp.addEventListener("change", ()=>{
+        const store=getStore();
+        store.responses = store.responses || {};
+        store.responses.q25 = store.responses.q25 || {};
+        store.responses.q25.items = store.responses.q25.items || [];
+        store.responses.q25.items[i-1] = store.responses.q25.items[i-1] || {};
+        store.responses.q25.items[i-1].expiryDate = dInp.value || "";
+        setStore(store);
+        document.getElementById(`err_q25_${i}`).textContent="";
+        itemBox.classList.remove("err");
+      });
+
+      // restore
+      const store=getStore();
+      const it = store?.responses?.q25?.items?.[i-1] || {};
+      dInp.value = it.expiryDate || "";
+      renderSingleThumb(`q25_photo_${i}_thumbs`, it.photo || "", ()=>{
+        const s=getStore();
+        s.responses.q25.items[i-1].photo="";
+        setStore(s);
+        renderSingleThumb(`q25_photo_${i}_thumbs`, "", ()=>{});
+      });
+
+      area.appendChild(itemBox);
+    }
+  }
+
+  // restore
+  const store=getStore();
+  const n = store?.responses?.q25?.count || 0;
+  sel.value = n ? String(n) : "";
+  if(n) renderFireItems(n);
+
+  return box;
+}
+
+function renderSingleThumb(thumbsId, url, onRemove){
+  const t = document.getElementById(thumbsId);
+  if(!t) return;
+  t.innerHTML="";
+  if(!url) return;
+  const d=document.createElement("div");
+  d.className="thumb";
+  d.style.backgroundImage = `url('${url}')`;
+  const x=document.createElement("button");
+  x.type="button"; x.className="x"; x.textContent="×";
+  x.onclick = onRemove;
+  d.appendChild(x);
+  t.appendChild(d);
+}
+
+function renderHRQ38(){
+  const qid="q38";
+  const box = qBoxBase(qid);
+
+  const lab = document.createElement("div");
+  lab.className="label";
+  lab.textContent = L("photo");
+  box.appendChild(lab);
+
+  const inp = fileInput(qid,"hr",true,true);
+  box.appendChild(inp);
+  box.appendChild(thumbsArea(qid,"photos"));
+
+  inp.addEventListener("change", async ()=>{
+    const store=getStore();
+    store.responses = store.responses || {};
+    store.responses[qid] = store.responses[qid] || {};
+    const prev = store.responses[qid].photos || [];
+    const added = await filesToDataUrls(inp.files);
+    store.responses[qid].photos = prev.concat(added).slice(0,10);
+    setStore(store);
+    renderThumbs(qid,"photos",store.responses[qid].photos);
+    setErr(qid,"");
+    inp.value="";
+  });
+
+  // restore
+  const store=getStore();
+  renderThumbs(qid,"photos", store?.responses?.[qid]?.photos || []);
+
+  return box;
+}
+
+function renderACQ39(){
+  const qid="q39";
+  const box = qBoxBase(qid);
+
+  const lab = document.createElement("div");
+  lab.className="label";
+  lab.textContent = L("selectCount");
+  box.appendChild(lab);
+
+  const sel = document.createElement("select");
+  sel.id = "q39_count";
+  const o0=document.createElement("option");
+  o0.value=""; o0.textContent = L("selectCount") || "";
+  sel.appendChild(o0);
+  for(let i=1;i<=20;i++){
+    const o=document.createElement("option");
+    o.value=String(i); o.textContent=String(i);
+    sel.appendChild(o);
+  }
+  box.appendChild(sel);
+
+  const area = document.createElement("div");
+  area.id="q39_area";
+  box.appendChild(area);
+
+  sel.addEventListener("change", ()=>{
+    const n=Number(sel.value||0);
+    const store=getStore();
+    store.responses = store.responses || {};
+    store.responses[qid] = store.responses[qid] || {};
+    store.responses[qid].count=n;
+    store.responses[qid].photos = (store.responses[qid].photos || []).slice(0,n);
+    setStore(store);
+    renderACItems(n);
+    setErr(qid,"");
+  });
+
+  function renderACItems(n){
+    area.innerHTML="";
+    for(let i=1;i<=n;i++){
+      const item = document.createElement("div");
+      item.className="q";
+      item.style.margin="10px 0";
+      item.id=`q39_item_${i}`;
+
+      const title=document.createElement("div");
+      title.className="q-title";
+      title.textContent = `${qText("q39")} ${i}`;
+      item.appendChild(title);
+
+      const err=document.createElement("div");
+      err.className="err-msg";
+      err.id=`err_q39_${i}`;
+      item.appendChild(err);
+
+      const pLab=document.createElement("div");
+      pLab.className="label";
+      pLab.textContent=L("photo");
+      item.appendChild(pLab);
+
+      const inp=document.createElement("input");
+      inp.type="file"; inp.accept="image/*"; inp.setAttribute("capture","environment");
+      inp.id=`q39_photo_${i}`;
+      item.appendChild(inp);
+
+      const t=document.createElement("div");
+      t.className="thumbs";
+      t.id=`q39_photo_${i}_thumbs`;
+      item.appendChild(t);
+
+      inp.addEventListener("change", async ()=>{
+        const store=getStore();
+        const added=await filesToDataUrls(inp.files);
+        store.responses = store.responses || {};
+        store.responses.q39 = store.responses.q39 || {};
+        store.responses.q39.photos = store.responses.q39.photos || [];
+        store.responses.q39.photos[i-1] = added[0] || "";
+        setStore(store);
+        renderSingleThumb(`q39_photo_${i}_thumbs`, store.responses.q39.photos[i-1], ()=>{
+          const s=getStore();
+          s.responses.q39.photos[i-1] = "";
+          setStore(s);
+          renderSingleThumb(`q39_photo_${i}_thumbs`, "", ()=>{});
+        });
+        err.textContent=""; item.classList.remove("err");
+        inp.value="";
+      });
+
+      // restore
+      const store=getStore();
+      const url = store?.responses?.q39?.photos?.[i-1] || "";
+      renderSingleThumb(`q39_photo_${i}_thumbs`, url, ()=>{
+        const s=getStore();
+        s.responses.q39.photos[i-1] = "";
+        setStore(s);
+        renderSingleThumb(`q39_photo_${i}_thumbs`, "", ()=>{});
+      });
+
+      area.appendChild(item);
+    }
+  }
+
+  // restore
+  const store=getStore();
+  const n=store?.responses?.q39?.count||0;
+  sel.value = n ? String(n) : "";
+  if(n) renderACItems(n);
+
+  return box;
+}
+
+function renderAssetsQ42(){
+  const qid="q42";
+  const box = qBoxBase(qid);
+
+  const br = branchEl.value || "";
+  const assets = (branchAssetList?.[br] || []);
+
+  const hint = document.createElement("div");
+  hint.className="hint";
+  hint.textContent = L("assetsHint") || "";
+  box.appendChild(hint);
+
+  const area = document.createElement("div");
+  area.id="q42_area";
+  box.appendChild(area);
+
+  // store structure: responses.q42.assets = { CODE: {answer:"Y/N", photos:[...] } }
+  const store=getStore();
+  store.responses = store.responses || {};
+  store.responses.q42 = store.responses.q42 || {};
+  store.responses.q42.assets = store.responses.q42.assets || {};
+  setStore(store);
+
+  assets.forEach((assetObj, idx)=>{
+    // support both string list OR object list
+    const code = (typeof assetObj==="string") ? assetObj : (assetObj.code || assetObj.asset || assetObj.id || String(idx+1));
+    const label = (typeof assetObj==="string") ? assetObj : (assetObj.label || assetObj.name || code);
+
+    const row = document.createElement("div");
+    row.className="q";
+    row.id = `q42_${code}`;
+
+    const top = document.createElement("div");
+    top.className="assetRow";
+
+    const name = document.createElement("div");
+    name.className="assetName";
+    const t=document.createElement("div");
+    t.className="q-title";
+    t.textContent = label;
+    name.appendChild(t);
+
+    const err=document.createElement("div");
+    err.className="err-msg";
+    err.id = `err_q42_${code}`;
+    name.appendChild(err);
+
+    top.appendChild(name);
+
+    const radios = document.createElement("div");
+    radios.className="radios";
+    radios.style.marginTop="0";
+
+    const y = document.createElement("label");
+    y.className="chip";
+    y.innerHTML = `<input type="radio" name="q42_${code}" value="Y"> <span>${L("y")}</span>`;
+    const n = document.createElement("label");
+    n.className="chip";
+    n.innerHTML = `<input type="radio" name="q42_${code}" value="N"> <span>${L("n")}</span>`;
+    radios.appendChild(y); radios.appendChild(n);
+    top.appendChild(radios);
+
+    row.appendChild(top);
+
+    const photoWrap = document.createElement("div");
+    photoWrap.style.display="none";
+    photoWrap.id = `wrap_q42_${code}`;
+
+    const pLab=document.createElement("div");
+    pLab.className="label";
+    pLab.textContent=L("photo");
+    photoWrap.appendChild(pLab);
+
+    const inp=document.createElement("input");
+    inp.type="file"; inp.accept="image/*"; inp.setAttribute("capture","environment");
+    inp.id=`q42_${code}_photo`;
+    photoWrap.appendChild(inp);
+
+    const thumbs=document.createElement("div");
+    thumbs.className="thumbs";
+    thumbs.id=`q42_${code}_thumbs`;
+    photoWrap.appendChild(thumbs);
+
+    row.appendChild(photoWrap);
+
+    radios.querySelectorAll("input").forEach(r=>{
+      r.addEventListener("change", ()=>{
+        const val = getRadio(`q42_${code}`);
+        const show = (val==="Y");
+        photoWrap.style.display = show ? "block" : "none";
+
+        const store=getStore();
+        store.responses = store.responses || {};
+        store.responses.q42 = store.responses.q42 || {};
+        store.responses.q42.assets = store.responses.q42.assets || {};
+        store.responses.q42.assets[code] = store.responses.q42.assets[code] || {};
+        store.responses.q42.assets[code].answer = val;
+        if(!show) store.responses.q42.assets[code].photos = [];
+        setStore(store);
+
+        // clear error
+        document.getElementById(`err_q42_${code}`).textContent="";
+        row.classList.remove("err");
+
+        // restore thumb if needed
+        const url = store.responses.q42.assets[code].photos?.[0] || "";
+        renderSingleThumb(`q42_${code}_thumbs`, url, ()=>{
+          const s=getStore();
+          s.responses.q42.assets[code].photos=[];
+          setStore(s);
+          renderSingleThumb(`q42_${code}_thumbs`, "", ()=>{});
+        });
+      });
+    });
+
+    inp.addEventListener("change", async ()=>{
+      const added = await filesToDataUrls(inp.files);
+      const store=getStore();
+      store.responses = store.responses || {};
+      store.responses.q42 = store.responses.q42 || {};
+      store.responses.q42.assets = store.responses.q42.assets || {};
+      store.responses.q42.assets[code] = store.responses.q42.assets[code] || {};
+      store.responses.q42.assets[code].photos = (added[0] ? [added[0]] : []);
+      setStore(store);
+
+      renderSingleThumb(`q42_${code}_thumbs`, store.responses.q42.assets[code].photos[0] || "", ()=>{
+        const s=getStore();
+        s.responses.q42.assets[code].photos=[];
+        setStore(s);
+        renderSingleThumb(`q42_${code}_thumbs`, "", ()=>{});
+      });
+
+      document.getElementById(`err_q42_${code}`).textContent="";
+      row.classList.remove("err");
+      inp.value="";
+    });
+
+    // restore selection + thumb
+    const store2=getStore();
+    const saved = store2?.responses?.q42?.assets?.[code] || {};
+    if(saved.answer){
+      const rr = document.querySelector(`input[name="q42_${code}"][value="${saved.answer}"]`);
+      if(rr) rr.checked = true;
+      photoWrap.style.display = (saved.answer==="Y") ? "block" : "none";
+      renderSingleThumb(`q42_${code}_thumbs`, saved.photos?.[0] || "", ()=>{
+        const s=getStore();
+        s.responses.q42.assets[code].photos=[];
+        setStore(s);
+        renderSingleThumb(`q42_${code}_thumbs`, "", ()=>{});
+      });
+    }
+
+    area.appendChild(row);
+  });
+
+  return box;
+}
+
+/* ================= SECTION: VALIDATION (single place) ================= */
+function getRadio(qid){
+  return document.querySelector(`input[name="${qid}"]:checked`)?.value || "";
+}
+function restoreRadio(qid){
+  const store = getStore();
+  const val = store?.responses?.[qid]?.answer || "";
+  if(val){
+    const el = document.querySelector(`input[name="${qid}"][value="${val}"]`);
+    if(el) el.checked = true;
   }
 }
-// ✅ INITIAL LOAD FIX
-document.addEventListener("DOMContentLoaded", function () {
-  loadBranches();
-  applyLanguage();
-});
+function firstErrorScroll(el){
+  if(!el) return;
+  el.scrollIntoView({behavior:"smooth", block:"center"});
+}
+
+function validatePage(pageNo){
+  // clear all errors in visible page area
+  document.querySelectorAll(`#page${pageNo} .q`).forEach(q=>q.classList.remove("err"));
+  document.querySelectorAll(`#page${pageNo} .err-msg`).forEach(e=>{ if(e.id.startsWith("err_")) e.textContent=""; });
+
+  let firstBad = null;
+
+  const store = getStore();
+  store.responses = store.responses || {};
+  setStore(store);
+
+  // Basic details validation on page1
+  if(pageNo===1){
+    // required: state, branch, branchHead, officeBoy
+    if(!stateEl.value){
+      firstBad = firstBad || document.getElementById("state");
+      stateEl.style.borderColor = "rgba(255,77,79,.75)";
+    } else stateEl.style.borderColor = "var(--border)";
+
+    if(!branchEl.value){
+      firstBad = firstBad || document.getElementById("branch");
+      branchEl.style.borderColor = "rgba(255,77,79,.75)";
+    } else branchEl.style.borderColor = "var(--border)";
+
+    const bh = document.getElementById("branchHead");
+    const ob = document.getElementById("officeBoy");
+    if(!bh.value.trim()){
+      firstBad = firstBad || bh;
+      bh.style.borderColor = "rgba(255,77,79,.75)";
+    } else bh.style.borderColor = "var(--border)";
+    if(!ob.value.trim()){
+      firstBad = firstBad || ob;
+      ob.style.borderColor = "rgba(255,77,79,.75)";
+    } else ob.style.borderColor = "var(--border)";
+  }
+
+  // question lists per page
+  const pageQ = {
+    1: [...Array(18)].map((_,i)=>"q"+(i+1)),
+    2: [...Array(9)].map((_,i)=>"q"+(i+19)),
+    3: [...Array(10)].map((_,i)=>"q"+(i+28)),
+    4: ["q38"],
+    5: ["q39","q40","q41"],
+    6: ["q42"]
+  }[pageNo] || [];
+
+  // validate each visible q
+  for(const qid of pageQ){
+    if(!shouldShowQuestion(qid)) continue;
+
+    if(qid==="q42"){
+      const br = branchEl.value || "";
+      const assets = (branchAssetList?.[br] || []);
+      const s = getStore();
+      const aset = s?.responses?.q42?.assets || {};
+      for(const assetObj of assets){
+        const code = (typeof assetObj==="string") ? assetObj : (assetObj.code || assetObj.asset || assetObj.id);
+        const row = document.getElementById(`q42_${code}`);
+        const ans = document.querySelector(`input[name="q42_${code}"]:checked`)?.value || "";
+        if(!ans){
+          if(row){ row.classList.add("err"); document.getElementById(`err_q42_${code}`).textContent = L("required") || ""; }
+          firstBad = firstBad || row;
+          continue;
+        }
+        if(ans==="Y"){
+          const photos = aset?.[code]?.photos || [];
+          if(!photos[0]){
+            if(row){ row.classList.add("err"); document.getElementById(`err_q42_${code}`).textContent = L("photoMissing") || L("photo") || ""; }
+            firstBad = firstBad || row;
+          }
+        }
+      }
+      continue;
+    }
+
+    if(qid==="q38"){
+      const photos = getStore()?.responses?.q38?.photos || [];
+      if(photos.length < 5){
+        setErr("q38", L("photoMissing") || L("photo") || "");
+        firstBad = firstBad || document.getElementById("box_q38");
+      }
+      continue;
+    }
+
+    if(qid==="q25"){
+      const s=getStore();
+      const n = Number(s?.responses?.q25?.count || 0);
+      if(!n){
+        setErr("q25", L("required") || "");
+        firstBad = firstBad || document.getElementById("box_q25");
+      } else {
+        for(let i=1;i<=n;i++){
+          const it = s.responses.q25.items?.[i-1] || {};
+          const row = document.getElementById(`q25_item_${i}`);
+          const err = document.getElementById(`err_q25_${i}`);
+          if(!it.photo || !it.expiryDate){
+            if(row) row.classList.add("err");
+            if(err) err.textContent = L("required") || "";
+            firstBad = firstBad || row;
+          }
+        }
+      }
+      continue;
+    }
+
+    if(qid==="q39"){
+      const s=getStore();
+      const n = Number(s?.responses?.q39?.count || 0);
+      if(!n){
+        setErr("q39", L("required") || "");
+        firstBad = firstBad || document.getElementById("box_q39");
+      } else {
+        for(let i=1;i<=n;i++){
+          const url = s.responses.q39.photos?.[i-1] || "";
+          const row = document.getElementById(`q39_item_${i}`);
+          const err = document.getElementById(`err_q39_${i}`);
+          if(!url){
+            if(row) row.classList.add("err");
+            if(err) err.textContent = L("photoMissing") || L("photo") || "";
+            firstBad = firstBad || row;
+          }
+        }
+      }
+      continue;
+    }
+
+    const ans = getRadio(qid);
+    if(!ans){
+      setErr(qid, L("required") || "");
+      firstBad = firstBad || document.getElementById("box_"+qid);
+      continue;
+    }
+
+    // policy
+    if(POLICY.has(qid) && ans==="Y"){
+      const s=getStore();
+      const r = s?.responses?.[qid] || {};
+      const vOk = String(r.version||"").trim() !== "" && /^[0-9]+$/.test(String(r.version||""));
+      const iOk = !!r.issueDate;
+      const eOk = !!r.effectiveDate;
+      const pOk = (r.photos||[])[0];
+      if(!vOk || !iOk || !eOk || !pOk){
+        setErr(qid, L("required") || "");
+        firstBad = firstBad || document.getElementById("box_"+qid);
+      }
+      continue;
+    }
+
+    // yes->photo required for yn+photo & multi
+    const needsPhoto =
+      (YN_PHOTO.has(qid) && ans==="Y") ||
+      (MULTI_1_5.has(qid) && ans==="Y");
+
+    if(needsPhoto){
+      const s=getStore();
+      const photos = s?.responses?.[qid]?.photos || [];
+      const min = MULTI_1_5.has(qid) ? 1 : 1;
+      if(photos.length < min){
+        setErr(qid, L("photoMissing") || L("photo") || "");
+        firstBad = firstBad || document.getElementById("box_"+qid);
+      }
+    }
+  }
+
+  if(firstBad){
+    // scroll
+    firstErrorScroll(firstBad);
+    return false;
+  }
+  return true;
+}
+
+/* ================= SECTION: SUBMIT & SAVE ================= */
+function buildPayload(pageNumber){
+  const store = getStore();
+  const payload = {
+    submissionId: submissionId || "",
+    pageNumber,
+    state: stateEl.value || "",
+    branch: branchEl.value || "",
+    branchHead: (document.getElementById("branchHead").value || "").trim(),
+    officeBoy: (document.getElementById("officeBoy").value || "").trim(),
+    responses: store.responses || {}
+  };
+  return payload;
+}
+
+async function onSubmitNext(){
+  // validate
+  if(!validatePage(currentPage)) return;
+
+  // lock button + show pending
+  const btn = document.getElementById("next"+currentPage);
+  const old = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = L("pending") || old;
+
+  // persist basic fields to draft
+  const store = getStore();
+  store.basic = {
+    state: stateEl.value || "",
+    branch: branchEl.value || "",
+    branchHead: (document.getElementById("branchHead").value || "").trim(),
+    officeBoy: (document.getElementById("officeBoy").value || "").trim()
+  };
+  setStore(store);
+
+  try{
+    const payload = buildPayload(currentPage);
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(()=> ({}));
+
+    if(data && data.submissionId){
+      submissionId = String(data.submissionId);
+      localStorage.setItem("submissionId", submissionId);
+    }
+
+    // success behavior
+    if(currentPage < 6){
+      showPage(currentPage + 1);
+    } else {
+      // final success popup + reset
+      showSuccess();
+      resetAll();
+    }
+  }catch(err){
+    // if you have msgLabels error key, use it; else keep old label
+    btn.textContent = L("wait") || old;
+    console.error(err);
+  }finally{
+    btn.disabled = false;
+    btn.textContent = (currentPage===6 ? (L("submit") || L("next")) : L("next")) || old;
+  }
+}
+
+function showSuccess(){
+  const ov = document.getElementById("overlay");
+  setText("okTitle", L("success") || "");
+  setText("okSub", L("successSub") || "");
+  ov.classList.add("show");
+  ov.setAttribute("aria-hidden","false");
+  setTimeout(()=>{ ov.classList.remove("show"); ov.setAttribute("aria-hidden","true"); }, 1600);
+}
+
+function resetAll(){
+  // clear draft
+  localStorage.removeItem("draft");
+  // keep submissionId? no; fresh submission
+  localStorage.removeItem("submissionId");
+  submissionId = "";
+
+  // reset UI
+  stateEl.value = "";
+  lang = "en";
+  renderAll();
+
+  document.getElementById("branchHead").value = "";
+  document.getElementById("officeBoy").value = "";
+
+  showPage(1);
+}
+
+/* ================= INIT ================= */
+(function init(){
+  // restore basic
+  const s = getStore();
+  if(s?.basic){
+    stateEl.value = s.basic.state || "";
+    lang = (STATE_LANG?.[stateEl.value] || "en");
+    renderBranchDropdown();
+    branchEl.value = s.basic.branch || "";
+    document.getElementById("branchHead").value = s.basic.branchHead || "";
+    document.getElementById("officeBoy").value = s.basic.officeBoy || "";
+  }
+  renderAll();
+})();
 </script>
-  <!-- SUBMIT LOADING OVERLAY -->
-<div id="submitOverlay" class="hidden">
-  <div class="overlay-box">
-    <div id="overlayMessage"></div>
 
-    <div class="progress-bar">
-      <div id="progressFill" class="progress-fill"></div>
-    </div>
-
-    <div id="progressText" style="margin-top:10px;font-weight:bold;">
-      0%
-    </div>
-  </div>
-</div>
-<!-- SUCCESS TOAST -->
-<div id="successToast" class="toast hidden"></div>
-  
 </body>
 </html>
