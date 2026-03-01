@@ -1177,24 +1177,21 @@ function getStore(){
   try{ return JSON.parse(localStorage.getItem("draft")||"{}"); }catch(e){ return {}; }
 }
 function setStore(store){
-
   // Clone object so original store untouched rahe
   const clean = JSON.parse(JSON.stringify(store || {}));
-
-  // Remove photos before saving to localStorageif (clean.responses) {
+  // Remove photos before saving to localStorage
+  if (clean.responses) {
   Object.keys(clean.responses).forEach(qid => {
     const r = clean.responses[qid];
     if (!r) return;
-
-    // If photos contain base64/dataURL, replace with small placeholder
+    // agar photos array me actual dataURL hai to localStorage me heavy data save mat karo
     if (Array.isArray(r.photos) && r.photos.some(x => typeof x === "string" && x.startsWith("data:image"))) {
-      r.photos = ["HAS_PHOTO"];
+      r.photos = ["HAS_PHOTO"]; // lightweight marker
     }
   });
 }
-
   localStorage.setItem("draft", JSON.stringify(clean));
-
+}
 /* ---- question renderers ---- */
 function renderYnOnly(qid){
   const box = qBoxBase(qid);
@@ -2232,6 +2229,7 @@ function resetAll(){
 
 </body>
 </html>
+
 
 
 
