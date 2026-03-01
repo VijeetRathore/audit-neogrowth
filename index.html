@@ -2058,7 +2058,7 @@ if (POLICY.has(qid) && ans === "Y") {
 
   // -------- VERSION CHECK --------
   const vStr = String(r.version || "").trim();
-  const vOk = vStr !== "" && /^[0-9]+(\.[0-9]+)?$/.test(vStr);
+  const vOk = vStr !== "" && /^\d+(\.\d{1,2})?$/.test(vStr);
 
   // -------- DATE CHECK (2019–2029 only) --------
   const iVal = String(r.issueDate || "").trim();
@@ -2232,6 +2232,7 @@ function resetAll(){
 
 </body>
 </html>
+
 
 
 
