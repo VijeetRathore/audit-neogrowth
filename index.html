@@ -1181,14 +1181,17 @@ function setStore(store){
   // Clone object so original store untouched rahe
   const clean = JSON.parse(JSON.stringify(store || {}));
 
-  // Remove photos before saving to localStorage
-  if (clean.responses) {
-    Object.keys(clean.responses).forEach(qid => {
-      if (clean.responses[qid]) {
-        delete clean.responses[qid].photos;
-      }
-    });
-  }
+  // Remove photos before saving to localStorageif (clean.responses) {
+  Object.keys(clean.responses).forEach(qid => {
+    const r = clean.responses[qid];
+    if (!r) return;
+
+    // If photos contain base64/dataURL, replace with small placeholder
+    if (Array.isArray(r.photos) && r.photos.some(x => typeof x === "string" && x.startsWith("data:image"))) {
+      r.photos = ["HAS_PHOTO"];
+    }
+  });
+}
 
   localStorage.setItem("draft", JSON.stringify(clean));
 }
@@ -1283,24 +1286,24 @@ function renderPolicy(qid){
   inline.className = "inline";
 
   const v = document.createElement("div"); v.className="mini";
-  const vLab = document.createElement("div"); vLab.className="label"; vLab.textContent = L("version");
+  const vLab = document.createElement("div"); vLab.className="label"; vLab.textContent = L("versionLabel") || "Version No";
   const vInp = document.createElement("input"); vInp.type="number"; vInp.inputMode="numeric"; vInp.id=`${qid}_version`;
   v.appendChild(vLab); v.appendChild(vInp);
 
   const i = document.createElement("div"); i.className="mini";
-  const iLab = document.createElement("div"); iLab.className="label"; iLab.textContent = L("issueDate") || L("date");
+  const iLab = document.createElement("div"); iLab.className="label"; iLab.textContent = L("issueDateLabel") || "Issue Date";
   const iInp = document.createElement("input"); iInp.type="date"; iInp.id=`${qid}_issueDate`;
   i.appendChild(iLab); i.appendChild(iInp);
 
   const e = document.createElement("div"); e.className="mini";
-  const eLab = document.createElement("div"); eLab.className="label"; eLab.textContent = L("effectiveDate") || L("date");
+  const eLab = document.createElement("div"); eLab.className="label"; eLab.textContent = L("effectiveDateLabel") || "Effective Date";
   const eInp = document.createElement("input"); eInp.type="date"; eInp.id=`${qid}_effectiveDate`;
   e.appendChild(eLab); e.appendChild(eInp);
 
   inline.appendChild(v); inline.appendChild(i); inline.appendChild(e);
   detail.appendChild(inline);
 
-  const pLab = document.createElement("div"); pLab.className="label"; pLab.textContent = L("photo");
+  const pLab = document.createElement("div"); pLab.className="label"; pLab.textContent = L("photoLabel") || "Upload Photo";
   detail.appendChild(pLab);
 
   const pInp = fileInput(qid,"photo",false,true);
@@ -1906,6 +1909,7 @@ function firstErrorScroll(el){
 
 function validatePage(pageNo){
   // clear all errors in visible page area
+  document.querySelectorAll(`#page${pageNo} .input-error`).forEach(el=>el.classList.remove("input-error"));
   document.querySelectorAll(`#page${pageNo} .q`).forEach(q=>q.classList.remove("err"));
   document.querySelectorAll(`#page${pageNo} .err-msg`).forEach(e=>{ if(e.id.startsWith("err_")) e.textContent=""; });
 
@@ -2055,7 +2059,7 @@ if (POLICY.has(qid) && ans === "Y") {
 
   // -------- VERSION CHECK --------
   const vStr = String(r.version || "").trim();
-  const vOk = vStr !== "" && /^[0-9]+$/.test(vStr);
+  const vOk = vStr !== "" && /^[0-9]+(\.[0-9]+)?$/.test(vStr);
 
   // -------- DATE CHECK (2019–2029 only) --------
   const iVal = String(r.issueDate || "").trim();
@@ -2229,6 +2233,7 @@ function resetAll(){
 
 </body>
 </html>
+
 
 
 
