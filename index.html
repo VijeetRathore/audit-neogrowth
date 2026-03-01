@@ -80,6 +80,7 @@
     .modal p{ margin:0; color:var(--muted); }
     .assetRow{ display:flex; gap:10px; flex-wrap:wrap; align-items:flex-start; }
     .assetName{ flex:1 1 260px; min-width:260px; }
+    .input-error{border: 2px solid red !important; background: #fff5f5; }
   </style>
 </head>
 
@@ -2023,20 +2024,61 @@ function validatePage(pageNo){
       continue;
     }
 
-    // policy
-    if(POLICY.has(qid) && ans==="Y"){
-      const s=getStore();
-      const r = s?.responses?.[qid] || {};
-      const vOk = String(r.version||"").trim() !== "" && /^[0-9]+$/.test(String(r.version||""));
-      const iOk = !!r.issueDate;
-      const eOk = !!r.effectiveDate;
-      const pOk = (r.photos||[])[0];
-      if(!vOk || !iOk || !eOk || !pOk){
-        setErr(qid, L("required") || "");
-        firstBad = firstBad || document.getElementById("box_"+qid);
-      }
-      continue;
-    }
+// policy (Q3-Q10)
+if (POLICY.has(qid) && ans === "Y") {
+
+  const s = getStore();
+  const r = s?.responses?.[qid] || {};
+
+  // Get inputs
+  const versionInput = document.getElementById(qid + "_version");
+  const issueInput = document.getElementById(qid + "_issueDate");
+  const effectiveInput = document.getElementById(qid + "_effectiveDate");
+
+  // Reset previous error style
+  [versionInput, issueInput, effectiveInput].forEach(el=>{
+    if(el) el.classList.remove("input-error");
+  });
+
+  // -------- VERSION CHECK --------
+  const vStr = String(r.version || "").trim();
+  const vOk = vStr !== "" && /^[0-9]+$/.test(vStr);
+
+  // -------- DATE CHECK (2019–2029 only) --------
+  const iVal = String(r.issueDate || "").trim();
+  const eVal = String(r.effectiveDate || "").trim();
+
+const iD = iVal ? new Date(iVal + "T00:00:00") : null;
+const eD = eVal ? new Date(eVal + "T00:00:00") : null;
+
+  const iOk = iD && !isNaN(iD.getTime());
+  const eOk = eD && !isNaN(eD.getTime());
+
+  const iYearOk = iOk && iD.getFullYear() >= 2019 && iD.getFullYear() <= 2029;
+  const eYearOk = eOk && eD.getFullYear() >= 2019 && eD.getFullYear() <= 2029;
+
+  // -------- PHOTO CHECK --------
+  const pOk = (r.photos || [])[0];
+
+  // -------- VALIDATION --------
+  if (!vOk) {
+    setErr(qid, L("version"));
+    if(versionInput) versionInput.classList.add("input-error");
+    firstBad = firstBad || document.getElementById("box_" + qid);
+  }
+  else if (!iOk || !eOk || !iYearOk || !eYearOk) {
+    setErr(qid, L("date"));
+    if(issueInput) issueInput.classList.add("input-error");
+    if(effectiveInput) effectiveInput.classList.add("input-error");
+    firstBad = firstBad || document.getElementById("box_" + qid);
+  }
+  else if (!pOk) {
+    setErr(qid, L("photo"));
+    firstBad = firstBad || document.getElementById("box_" + qid);
+  }
+
+  continue;
+}
 
     // yes->photo required for yn+photo & multi
     const needsPhoto =
@@ -2174,6 +2216,7 @@ function resetAll(){
 
 </body>
 </html>
+
 
 
 
