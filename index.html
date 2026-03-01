@@ -26,6 +26,10 @@
       width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--border);
       background:rgba(255,255,255,.04); color:var(--text); outline:none;
     }
+    select, option{
+  background:#fff;
+  color:#0f172a;
+}
     input::placeholder{ color:rgba(230,238,252,.45); }
     .pages{ margin-top:12px; }
     .form-page{ display:none; }
@@ -916,20 +920,18 @@ function onBack(){
 }
 
 /* ================= SECTION: PAGE RENDER ================= */
-function renderAll(){
-  // top texts (optional keys if you have)
+function renderStaticTexts(){
   setText("topTitle", L("title") || "");
   setText("topSub", L("subtitle") || "");
 
-  // labels for basic fields (use your msgLabels keys if present; else blank)
   setText("lblState", L("state") || "");
   setText("lblBranch", L("branch") || "");
   setText("lblBranchHead", L("branchHead") || "");
   setText("lblOfficeBoy", L("officeBoy") || "");
-
-  renderStateDropdown();
-  renderBranchDropdown();
-
+}
+function renderAll(){
+  renderStaticTexts();
+  renderBranchDropdown();   // state ke hisaab se branches update
   renderPageQuestions();
   setButtons();
 }
@@ -948,13 +950,24 @@ function renderStateDropdown(){
     o.value=st; o.textContent=st; // state names are data, not UI labels
     stateEl.appendChild(o);
   });
-
-  stateEl.onchange = ()=>{
-    lang = (STATE_LANG?.[stateEl.value] || "en");
-    renderAll(); // re-render texts + questions
-  };
+stateEl.onchange = ()=>{
+  lang = (STATE_LANG?.[stateEl.value] || "en");
+  renderStaticTexts();
+  renderBranchDropdown();
+  branchEl.value = "";
+  renderPageQuestions();
+  setButtons();
+};
 }
 function renderBranchDropdown(){
+  if(!stateEl.value){
+  branchEl.innerHTML = "";
+  const opt = document.createElement("option");
+  opt.value = "";
+  opt.textContent = L("selectBranch") || "";
+  branchEl.appendChild(opt);
+  return;
+}
   branchEl.innerHTML = "";
   const opt0 = document.createElement("option");
   opt0.value = "";
@@ -2145,6 +2158,7 @@ function resetAll(){
 
 /* ================= INIT ================= */
 (function init(){
+  renderStateDropdown(); // ✅ only once
   // restore basic
   const s = getStore();
   if(s?.basic){
@@ -2161,5 +2175,6 @@ function resetAll(){
 
 </body>
 </html>
+
 
 
