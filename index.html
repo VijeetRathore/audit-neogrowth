@@ -1381,35 +1381,98 @@ function renderMultiPhoto(qid, min, max){
   lab.textContent = L("photo");
   wrap.appendChild(lab);
 
-  const inp = fileInput(qid,"multi",true,true);
+  // ✅ in-memory list for this qid
+  window.PHOTO_CACHE = window.PHOTO_CACHE || {};
+  if(!window.PHOTO_CACHE[qid]) window.PHOTO_CACHE[qid] = [];
+
+  // ✅ hidden input: camera open (1 photo at a time)
+  const inp = fileInput(qid, "multi", false, true); // multiple=false, capture=true
+  inp.style.display = "none";
   wrap.appendChild(inp);
+
+  // ✅ button shown to user
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.style.marginTop = "8px";
+  wrap.appendChild(btn);
+
+  // thumbs area
   wrap.appendChild(thumbsArea(qid,"photos"));
+
+  function syncStoreCount(){
+    const store = getStore();
+    store.responses = store.responses || {};
+    store.responses[qid] = store.responses[qid] || {};
+    store.responses[qid].photos = Array(window.PHOTO_CACHE[qid].length).fill("HAS_PHOTO");
+    setStore(store);
+  }
+
+  function updateBtn(){
+    const n = window.PHOTO_CACHE[qid].length;
+    btn.textContent = (n === 0) ? "Capture photo" : `Add more photo (${n}/${max})`;
+    btn.disabled = (n >= max);
+  }
+
+  function renderLocalThumbs(){
+    const t = document.getElementById(`${qid}_photos_thumbs`);
+    if(!t) return;
+    t.innerHTML = "";
+
+    window.PHOTO_CACHE[qid].forEach((url, idx)=>{
+      const d = document.createElement("div");
+      d.className = "thumb";
+      d.style.backgroundImage = `url('${url}')`;
+
+      const x = document.createElement("button");
+      x.type = "button";
+      x.className = "x";
+      x.textContent = "×";
+      x.onclick = ()=>{
+        window.PHOTO_CACHE[qid].splice(idx, 1);
+        syncStoreCount();
+        renderLocalThumbs();
+        updateBtn();
+      };
+
+      d.appendChild(x);
+      t.appendChild(d);
+    });
+  }
+
+  btn.onclick = ()=> inp.click();
 
   box.appendChild(radiosYesNo(qid, (val)=>{
     const show = (val==="Y");
     wrap.style.display = show ? "block" : "none";
 
-    const store=getStore();
+    const store = getStore();
     store.responses = store.responses || {};
     store.responses[qid] = store.responses[qid] || {};
     store.responses[qid].answer = val;
-    if(!show){ store.responses[qid].photos=[]; clearThumbs(qid,"photos"); }
+
+    if(!show){
+      window.PHOTO_CACHE[qid] = [];
+      store.responses[qid].photos = [];
+      clearThumbs(qid,"photos");
+    }
     setStore(store);
 
     setErr(qid,"");
-    if(show) renderThumbs(qid,"photos", store.responses[qid].photos || []);
+    if(show){
+      renderLocalThumbs();
+      updateBtn();
+    }
   }));
 
   inp.addEventListener("change", async ()=>{
-    const store=getStore();
-    store.responses = store.responses || {};
-    store.responses[qid] = store.responses[qid] || {};
-    const prev = store.responses[qid].photos || [];
     const added = await filesToDataUrls(inp.files);
-    store.responses[qid].photos = prev.concat(added).slice(0,max);
-    setStore(store);
-    renderThumbs(qid,"photos",store.responses[qid].photos);
-    setErr(qid,"");
+    if(added.length){
+      window.PHOTO_CACHE[qid] = window.PHOTO_CACHE[qid].concat([added[0]]).slice(0, max);
+      syncStoreCount();
+      renderLocalThumbs();
+      updateBtn();
+      setErr(qid,"");
+    }
     inp.value="";
   });
 
@@ -1419,8 +1482,10 @@ function renderMultiPhoto(qid, min, max){
   restoreRadio(qid);
   const cur = getRadio(qid);
   wrap.style.display = (cur==="Y") ? "block" : "none";
-  const store=getStore();
-  if(cur==="Y") renderThumbs(qid,"photos", store?.responses?.[qid]?.photos || []);
+  if(cur==="Y"){
+    renderLocalThumbs();
+    updateBtn();
+  }
 
   return box;
 }
@@ -2229,6 +2294,7 @@ function resetAll(){
 
 </body>
 </html>
+
 
 
 
