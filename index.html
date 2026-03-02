@@ -1177,23 +1177,44 @@ function getStore(){
   try{ return JSON.parse(localStorage.getItem("draft")||"{}"); }catch(e){ return {}; }
 }
 function setStore(store){
-  // Clone
+  // deep clone
   const clean = JSON.parse(JSON.stringify(store || {}));
 
-  // Convert photo dataURLs to lightweight placeholders (keep count)
-  if (clean.responses) {
-    Object.keys(clean.responses).forEach(qid => {
-      const r = clean.responses[qid];
-      if (r && Array.isArray(r.photos)) {
-        r.photos = r.photos.map(x => {
-          if (typeof x === "string" && x.startsWith("data:")) return "HAS_PHOTO";
-          return x; // already placeholder
-        });
+  // 🔥 Replace ANY dataURL anywhere in object (not only responses[].photos)
+  const walk = (obj) => {
+    if (!obj) return;
+    if (Array.isArray(obj)) {
+      for (let i = 0; i < obj.length; i++) {
+        const v = obj[i];
+        if (typeof v === "string" && v.startsWith("data:")) obj[i] = "HAS_PHOTO";
+        else if (typeof v === "object" && v) walk(v);
       }
-    });
-  }
+      return;
+    }
+    if (typeof obj === "object") {
+      Object.keys(obj).forEach(k => {
+        const v = obj[k];
+        if (typeof v === "string" && v.startsWith("data:")) obj[k] = "HAS_PHOTO";
+        else if (typeof v === "object" && v) walk(v);
+      });
+    }
+  };
 
-  localStorage.setItem("draft", JSON.stringify(clean));
+  walk(clean);
+
+  // ✅ safe save with quota fallback
+  try{
+    localStorage.setItem("draft", JSON.stringify(clean));
+  }catch(e){
+    console.warn("Draft too big, skipping localStorage save", e);
+    // emergency: try clearing and saving again once
+    try{
+      localStorage.removeItem("draft");
+      localStorage.setItem("draft", JSON.stringify(clean));
+    }catch(e2){
+      console.warn("Still too big, draft not saved", e2);
+    }
+  }
 }
 /* ---- question renderers ---- */
 function renderYnOnly(qid){
@@ -2354,6 +2375,7 @@ function resetAll(){
 
 </body>
 </html>
+
 
 
 
