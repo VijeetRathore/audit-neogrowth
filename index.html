@@ -1177,19 +1177,22 @@ function getStore(){
   try{ return JSON.parse(localStorage.getItem("draft")||"{}"); }catch(e){ return {}; }
 }
 function setStore(store){
-  // Clone object so original store untouched rahe
+  // Clone
   const clean = JSON.parse(JSON.stringify(store || {}));
-  // Remove photos before saving to localStorage
+
+  // Convert photo dataURLs to lightweight placeholders (keep count)
   if (clean.responses) {
-  Object.keys(clean.responses).forEach(qid => {
-    const r = clean.responses[qid];
-    if (!r) return;
-    // agar photos array me actual dataURL hai to localStorage me heavy data save mat karo
-    if (Array.isArray(r.photos) && r.photos.some(x => typeof x === "string" && x.startsWith("data:image"))) {
-      r.photos = ["HAS_PHOTO"]; // lightweight marker
-    }
-  });
-}
+    Object.keys(clean.responses).forEach(qid => {
+      const r = clean.responses[qid];
+      if (r && Array.isArray(r.photos)) {
+        r.photos = r.photos.map(x => {
+          if (typeof x === "string" && x.startsWith("data:")) return "HAS_PHOTO";
+          return x; // already placeholder
+        });
+      }
+    });
+  }
+
   localStorage.setItem("draft", JSON.stringify(clean));
 }
 /* ---- question renderers ---- */
@@ -1650,35 +1653,92 @@ function renderSingleThumb(thumbsId, url, onRemove){
 }
 
 function renderHRQ38(){
-  const qid="q38";
+  const qid = "q38";
   const box = qBoxBase(qid);
 
-  const lab = document.createElement("div");
-  lab.className="label";
-  lab.textContent = L("photo");
-  box.appendChild(lab);
+  const wrap = document.createElement("div");
+  wrap.style.display = "block";
 
-  const inp = fileInput(qid,"hr",true,true);
-  box.appendChild(inp);
-  box.appendChild(thumbsArea(qid,"photos"));
+  // init cache
+  window.PHOTO_CACHE = window.PHOTO_CACHE || {};
+  window.PHOTO_CACHE[qid] = window.PHOTO_CACHE[qid] || [];
 
-  inp.addEventListener("change", async ()=>{
-    const store=getStore();
+  // hidden input (camera open 1 photo at a time)
+  const inp = fileInput(qid, "photos", false, true); // multiple=false, capture=true
+  inp.style.display = "none";
+  wrap.appendChild(inp);
+
+  // button shown to user
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.style.marginTop = "8px";
+  wrap.appendChild(btn);
+
+  // thumbs area
+  wrap.appendChild(thumbsArea(qid, "photos"));
+
+  function syncDraftCount(){
+    const store = getStore();
     store.responses = store.responses || {};
     store.responses[qid] = store.responses[qid] || {};
-    const prev = store.responses[qid].photos || [];
-    const added = await filesToDataUrls(inp.files);
-    store.responses[qid].photos = prev.concat(added).slice(0,10);
+    // placeholder array length for validation (min/max)
+    store.responses[qid].photos = Array(window.PHOTO_CACHE[qid].length).fill("HAS_PHOTO");
     setStore(store);
-    renderThumbs(qid,"photos",store.responses[qid].photos);
-    setErr(qid,"");
-    inp.value="";
+  }
+
+  function updateBtn(){
+    const n = window.PHOTO_CACHE[qid].length;
+    btn.textContent = (n === 0) ? "Capture photo" : `Add more photo (${n}/10)`;
+    btn.disabled = (n >= 10);
+  }
+
+  function renderLocalThumbs(){
+    const t = document.getElementById(`${qid}_photos_thumbs`);
+    if(!t) return;
+    t.innerHTML = "";
+
+    window.PHOTO_CACHE[qid].forEach((url, idx) => {
+      const d = document.createElement("div");
+      d.className = "thumb";
+      d.style.backgroundImage = `url('${url}')`;
+
+      const x = document.createElement("button");
+      x.type = "button";
+      x.className = "x";
+      x.textContent = "×";
+      x.onclick = () => {
+        window.PHOTO_CACHE[qid].splice(idx, 1);
+        syncDraftCount();
+        renderLocalThumbs();
+        updateBtn();
+        setErr(qid, "");
+      };
+
+      d.appendChild(x);
+      t.appendChild(d);
+    });
+  }
+
+  btn.onclick = () => inp.click();
+
+  inp.addEventListener("change", async () => {
+    const added = await filesToDataUrls(inp.files);
+    if (added.length) {
+      window.PHOTO_CACHE[qid] = window.PHOTO_CACHE[qid].concat([added[0]]).slice(0, 10);
+      syncDraftCount();
+      renderLocalThumbs();
+      updateBtn();
+      setErr(qid, "");
+    }
+    inp.value = "";
   });
 
-  // restore
-  const store=getStore();
-  renderThumbs(qid,"photos", store?.responses?.[qid]?.photos || []);
+  // initial paint
+  syncDraftCount();
+  renderLocalThumbs();
+  updateBtn();
 
+  box.appendChild(wrap);
   return box;
 }
 
@@ -2294,6 +2354,7 @@ function resetAll(){
 
 </body>
 </html>
+
 
 
 
