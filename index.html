@@ -2341,6 +2341,25 @@ function showSuccess(){
   ov.setAttribute("aria-hidden","false");
   setTimeout(()=>{ ov.classList.remove("show"); ov.setAttribute("aria-hidden","true"); }, 1600);
 }
+  function hardResetFormState(){
+  // localStorage se saved draft hatao
+  try { localStorage.removeItem("draft"); } catch(e){}
+  try { localStorage.removeItem("submissionId"); } catch(e){}
+window.PHOTO_CACHE = {};   // ✅ clear photo thumbs cache
+  // in-memory id bhi reset
+  submissionId = "";
+
+  // UI fields clear
+  if (stateEl) stateEl.value = "";
+  if (branchEl) branchEl.value = "";
+  const bh = document.getElementById("branchHead");
+  const ob = document.getElementById("officeBoy");
+  if (bh) bh.value = "";
+  if (ob) ob.value = "";
+
+  // language reset
+  lang = "en";
+}
 
 function resetAll(){
   // clear draft
@@ -2360,25 +2379,29 @@ function resetAll(){
   showPage(1);
 }
 
-/* ================= INIT ================= */
-(function init(){
-  renderStateDropdown(); // ✅ only once
-  // restore basic
-  const s = getStore();
-  if(s?.basic){
-    stateEl.value = s.basic.state || "";
-    lang = (STATE_LANG?.[stateEl.value] || "en");
-    renderBranchDropdown();
-    branchEl.value = s.basic.branch || "";
-    document.getElementById("branchHead").value = s.basic.branchHead || "";
-    document.getElementById("officeBoy").value = s.basic.officeBoy || "";
+/* ========== INIT ========== */
+// First load
+document.addEventListener("DOMContentLoaded", () => {
+  renderStateDropdown();     // ✅ same as before
+  hardResetFormState();      // ✅ start fresh (draft + submissionId clear)
+  renderAll();               // ✅ render UI
+  showPage(1);               // ✅ go to first page
+});
+
+// Mobile back / recent apps cache fix (bfcache)
+window.addEventListener("pageshow", (e) => {
+  if (e.persisted) {
+    renderStateDropdown();
+    hardResetFormState();
+    renderAll();
+    showPage(1);
   }
-  renderAll();
-})();
+});
 </script>
 
 </body>
 </html>
+
 
 
 
