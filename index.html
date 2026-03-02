@@ -21,7 +21,7 @@
     .card{ background:var(--card); border:1px solid var(--border); border-radius:14px; padding:14px; }
     .row{ display:flex; gap:12px; flex-wrap:wrap; }
     .col{ flex:1 1 260px; min-width:260px; }
-    .label{ font-size:13px; color:var(--muted); margin:8px 0 6px; }
+    .label{ display:block; font-size:14px; font-weight:600; color:var(--text); margin:10px 0 6px; }
     select,input[type="text"],input[type="number"],input[type="date"]{
       width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--border);
       background:rgba(255,255,255,.04); color:var(--text); outline:none;
@@ -96,23 +96,23 @@
         <div id="page1" class="form-page active">
           <div class="row">
             <div class="col">
-              <div class="label" id="lblState"></div>
-              <select id="state"></select>
+<label for="state" class="label">Select State</label>
+<select id="state"></select>
             </div>
             <div class="col">
-              <div class="label" id="lblBranch"></div>
-              <select id="branch"></select>
+ <label for="branch" class="label">Select Branch</label>
+<select id="branch"></select>
             </div>
           </div>
 
           <div class="row">
             <div class="col">
-              <div class="label" id="lblBranchHead"></div>
-              <input id="branchHead" type="text" autocomplete="off" />
+ <label for="branchHead" class="label">Branch Head Name</label>
+<input id="branchHead" type="text" autocomplete="off" />
             </div>
             <div class="col">
-              <div class="label" id="lblOfficeBoy"></div>
-              <input id="officeBoy" type="text" autocomplete="off" />
+ <label for="officeBoy" class="label">Office Boy Name</label>
+<input id="officeBoy" type="text" autocomplete="off" />
             </div>
           </div>
 
@@ -2987,6 +2987,7 @@ window.addEventListener("pageshow", (e) => {
 
 </body>
 </html>
+
 
 
 
