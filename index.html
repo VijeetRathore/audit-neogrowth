@@ -2490,7 +2490,7 @@ function renderAssetsQ42(){
   assets.forEach((assetObj, idx)=>{
     // support both string list OR object list
     const code = (typeof assetObj==="string") ? assetObj : (assetObj.code || assetObj.asset || assetObj.id || String(idx+1));
-    const label = (typeof assetObj==="string") ? assetObj : (assetObj.label || assetObj.name || code);
+    const label = (typeof assetObj==="string") ? assetObj : (assetObj.label || assetObj.name || assetObj.desc || code);
 
     const row = document.createElement("div");
     row.className="q";
@@ -2987,6 +2987,7 @@ window.addEventListener("pageshow", (e) => {
 
 </body>
 </html>
+
 
 
 
