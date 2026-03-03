@@ -1990,10 +1990,12 @@ function renderMultiPhoto(qid, min, max){
   wrap.style.display = "none";
   wrap.id = `wrap_${qid}_multi`;
 
-  const lab = document.createElement("div");
-  lab.className="label";
-  lab.textContent = L("photo");
-  wrap.appendChild(lab);
+const lab = document.createElement("div");
+lab.className="label";
+lab.textContent = (qid === "q21")
+    ? L("firstAidTip")
+    : L("photo");
+wrap.appendChild(lab);
 
   // ✅ in-memory list for this qid
   window.PHOTO_CACHE = window.PHOTO_CACHE || {};
@@ -2987,6 +2989,7 @@ window.addEventListener("pageshow", (e) => {
 
 </body>
 </html>
+
 
 
 
