@@ -228,7 +228,8 @@ function showProgressOverlay(text = "Uploading...") {
   if (!ov) return;
 
   ov.classList.add("show");
-  document.getElementById("pText").innerText = text;
+ const pt = document.getElementById("progressText") || document.getElementById("pText");
+if (pt) pt.innerText = text;
   updateProgress(0);
 }
 
@@ -3119,6 +3120,7 @@ window.addEventListener("pageshow", (e) => {
 </div>
 </body>
 </html>
+
 
 
 
