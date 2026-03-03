@@ -1767,7 +1767,8 @@ function renderThumbs(qid, key, dataUrls){
 /* ---- storage for per-page answers before save ---- */
 function getStore(){
   if (window.MASTER_DATA && Object.keys(window.MASTER_DATA).length) return window.MASTER_DATA;
-  return JSON.parse(localStorage.getItem("draft") || "{}");
+  try { return JSON.parse(localStorage.getItem("draft") || "{}"); }
+  catch(e){ return {}; }
 }
 function setStore(store){
   // 1) RAM me poora store (photos ke saath)
@@ -2989,6 +2990,7 @@ window.addEventListener("pageshow", (e) => {
 
 </body>
 </html>
+
 
 
 
