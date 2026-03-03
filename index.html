@@ -177,6 +177,8 @@
 <script>
 /* ================= CONFIG PLACEHOLDERS (PASTE YOUR DATA HERE) ================= */
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx8IU30tUgBO7XnGOMdtvWeHCS66vtj6tiBvEARPrLaElDOsCyEM13QxHskI5mjrBgo/exec";
+// Ye browser ki RAM mein poora data (asli photos ke sath) rakhega
+window.MASTER_DATA = JSON.parse(localStorage.getItem("draft") || "{}");  
 
 const msgLabels = {
   hi: {
@@ -1764,48 +1766,46 @@ function renderThumbs(qid, key, dataUrls){
 
 /* ---- storage for per-page answers before save ---- */
 function getStore(){
-  try{ return JSON.parse(localStorage.getItem("draft")||"{}"); }catch(e){ return {}; }
+  if (window.MASTER_DATA && Object.keys(window.MASTER_DATA).length) return window.MASTER_DATA;
+  return JSON.parse(localStorage.getItem("draft") || "{}");
 }
 function setStore(store){
-  // deep clone
-  const clean = JSON.parse(JSON.stringify(store || {}));
+  // 1) RAM me poora store (photos ke saath)
+  window.MASTER_DATA = store || {};
 
-  // 🔥 Replace ANY dataURL anywhere in object (not only responses[].photos)
-  const walk = (obj) => {
-    if (!obj) return;
+  // 2) localStorage ke liye clone
+  const draftForDisk = JSON.parse(JSON.stringify(store || {}));
+
+  const stripPhotos = (obj) => {
+    if (obj == null) return; // ✅ null / undefined safe
+
     if (Array.isArray(obj)) {
       for (let i = 0; i < obj.length; i++) {
         const v = obj[i];
         if (typeof v === "string" && v.startsWith("data:")) obj[i] = "HAS_PHOTO";
-        else if (typeof v === "object" && v) walk(v);
+        else if (v && typeof v === "object") stripPhotos(v); // ✅ null safe
       }
       return;
     }
+
     if (typeof obj === "object") {
       Object.keys(obj).forEach(k => {
         const v = obj[k];
         if (typeof v === "string" && v.startsWith("data:")) obj[k] = "HAS_PHOTO";
-        else if (typeof v === "object" && v) walk(v);
+        else if (v && typeof v === "object") stripPhotos(v); // ✅ null safe
       });
     }
   };
 
-  walk(clean);
+  stripPhotos(draftForDisk);
 
-  // ✅ safe save with quota fallback
-  try{
-    localStorage.setItem("draft", JSON.stringify(clean));
-  }catch(e){
-    console.warn("Draft too big, skipping localStorage save", e);
-    // emergency: try clearing and saving again once
-    try{
-      localStorage.removeItem("draft");
-      localStorage.setItem("draft", JSON.stringify(clean));
-    }catch(e2){
-      console.warn("Still too big, draft not saved", e2);
-    }
+  try {
+    localStorage.setItem("draft", JSON.stringify(draftForDisk));
+  } catch(e) {
+    console.warn("localStorage limit reached, but RAM is holding your photos.");
   }
 }
+  
 /* ---- question renderers ---- */
 function renderYnOnly(qid){
   const box = qBoxBase(qid);
@@ -2989,6 +2989,7 @@ window.addEventListener("pageshow", (e) => {
 
 </body>
 </html>
+
 
 
 
