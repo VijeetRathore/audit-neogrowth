@@ -26,7 +26,10 @@
       width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--border);
       background:rgba(255,255,255,.04); color:var(--text); outline:none;
     }
-    select, option{ background:#fff; color:#0f172a; }
+    select, option{
+  background:#fff;
+  color:#0f172a;
+}
     input::placeholder{ color:rgba(230,238,252,.45); }
     .pages{ margin-top:12px; }
     .form-page{ display:none; }
@@ -78,51 +81,6 @@
     .assetRow{ display:flex; gap:10px; flex-wrap:wrap; align-items:flex-start; }
     .assetName{ flex:1 1 260px; min-width:260px; }
     .input-error{border: 2px solid red !important; background: #fff5f5; }
-/* ===== Upload Progress Overlay Styles ===== */
-.povl{
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,.45);
-  display:none;
-  align-items:center;
-  justify-content:center;
-  z-index:9999;
-}
-.povl.show{ display:flex; }
-
-.pcard{
-  width:min(420px,95vw);
-  background:var(--card);
-  border:1px solid var(--border);
-  border-radius:16px;
-  padding:20px;
-  text-align:center;
-}
-
-.ptxt{
-  font-weight:600;
-  margin-bottom:12px;
-}
-
-.pbar{
-  height:12px;
-  background:#eee;
-  border-radius:10px;
-  overflow:hidden;
-}
-
-.pfill{
-  width:0%;
-  height:100%;
-  background:var(--ok);
-  transition:width .25s ease;
-}
-
-.ppct{
-  font-size:13px;
-  margin-top:8px;
-  color:var(--muted);
-}
   </style>
 </head>
 
@@ -221,59 +179,6 @@
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx8IU30tUgBO7XnGOMdtvWeHCS66vtj6tiBvEARPrLaElDOsCyEM13QxHskI5mjrBgo/exec";
 // Ye browser ki RAM mein poora data (asli photos ke sath) rakhega
 window.MASTER_DATA = JSON.parse(localStorage.getItem("draft") || "{}");  
-/* ===== Upload Progress Helpers ===== */
-
-function showProgressOverlay(text = "Uploading...") {
-  let ov = document.getElementById("progressOverlay");
-  if (!ov) return;
-
-  ov.classList.add("show");
- const pt = document.getElementById("progressText") || document.getElementById("pText");
-if (pt) pt.innerText = text;
-  updateProgress(0);
-}
-
-function hideProgressOverlay() {
-  let ov = document.getElementById("progressOverlay");
-  if (!ov) return;
-  ov.classList.remove("show");
-}
-
-function updateProgress(percent) {
-  const fill = document.getElementById("progressFill");
-  const pct  = document.getElementById("progressPct");
-
-  const p = Math.max(0, Math.min(100, Number(percent) || 0));
-  if (fill) fill.style.width = p + "%";
-  if (pct)  pct.innerText = p + "%";
-}
-function postWithProgress(url, payloadObj, onPct) {
-  return new Promise((resolve, reject) => {
-    try {
-      const xhr = new XMLHttpRequest();
-      xhr.open("POST", url, true);
-xhr.timeout = 60000;
-      // IMPORTANT: header mat set karo, taki OPTIONS/preflight na aaye
-      // xhr.setRequestHeader("Content-Type", "application/json");
-
-      xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable && typeof onPct === "function") {
-          const pct = Math.round((e.loaded / e.total) * 100);
-          onPct(pct);
-        }
-      };
-
-      xhr.onload = () => resolve(xhr);
-      xhr.onerror = () => reject(new Error("Network error"));
-      xhr.ontimeout = () => reject(new Error("Timeout"));
-
-      // body JSON string me bhejo (default text/plain jata hai)
-      xhr.send(JSON.stringify(payloadObj));
-    } catch (err) {
-      reject(err);
-    }
-  });
-}
 
 const msgLabels = {
   hi: {
@@ -2987,35 +2892,12 @@ async function onSubmitNext(){
   setStore(store);
 
   try{
- const payload = buildPayload(currentPage);
-// Progress overlay show
-showProgressOverlay(L("wait") || "Please wait, data is being sent...");
-updateProgress(0);
-// Upload with progress
-const r = await postWithProgress(APPS_SCRIPT_URL, payload, (pct) => {
-  updateProgress(pct);
-  const pt = document.getElementById("progressText");
-if (pt) pt.innerText = (L("wait") || "Please wait, data is being sent...") + " " + pct + "%";});
-// finish bar
-updateProgress(100);
-const ok = r && (r.status >= 200 && r.status < 400); // 200-399 allow
-if (!ok) {
-  throw new Error("Server error: " + (r ? r.status : "No response"));
-}
-// parse response
-    
-let data = {};
-try { data = JSON.parse(r.responseText || "{}"); } catch(e) {}
-    // 800ms delay so user sees 100%
-setTimeout(() => {
-const pt = document.getElementById("progressText");
-if (pt) pt.innerText = (L("success") || "Data has been submitted");
-  updateProgress(100);
-
-  setTimeout(() => {
-    hideProgressOverlay();
-  }, 3200); // 3.2 seconds success display
-}, 800);
+    const payload = buildPayload(currentPage);
+    const res = await fetch(APPS_SCRIPT_URL, {
+  method: "POST",
+  body: JSON.stringify(payload), // text/plain by default => no preflight
+});
+    const data = await res.json().catch(()=> ({}));
 
     if(data && data.submissionId){
       submissionId = String(data.submissionId);
@@ -3031,7 +2913,6 @@ if (pt) pt.innerText = (L("success") || "Data has been submitted");
       resetAll();
     }
   }catch(err){
-      hideProgressOverlay();
     // if you have msgLabels error key, use it; else keep old label
     btn.textContent = L("wait") || old;
     console.error(err);
@@ -3106,23 +2987,9 @@ window.addEventListener("pageshow", (e) => {
   }
 });
 </script>
-<!-- Upload Progress Overlay -->
-<div id="progressOverlay" class="povl" aria-hidden="true">
-  <div class="pcard">
-    <div id="progressText" class="ptxt">Please wait…</div>
 
-    <div class="pbar">
-      <div id="progressFill" class="pfill" style="width:0%"></div>
-    </div>
-
-    <div id="progressPct" class="ppct">0%</div>
-  </div>
-</div>
 </body>
 </html>
-
-
-
 
 
 
