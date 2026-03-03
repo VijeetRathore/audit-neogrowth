@@ -2019,7 +2019,7 @@ wrap.appendChild(lab);
     const store = getStore();
     store.responses = store.responses || {};
     store.responses[qid] = store.responses[qid] || {};
-    store.responses[qid].photos = Array(window.PHOTO_CACHE[qid].length).fill("HAS_PHOTO");
+    store.responses[qid].photos = window.PHOTO_CACHE[qid];
     setStore(store);
   }
 
@@ -2989,6 +2989,7 @@ window.addEventListener("pageshow", (e) => {
 
 </body>
 </html>
+
 
 
 
