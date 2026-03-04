@@ -171,6 +171,13 @@
     <div class="modal">
       <h3 id="okTitle"></h3>
       <p id="okSub"></p>
+      <div id="ovProgress" style="display:none;margin-top:12px;">
+  <div id="ovMsg" style="font-weight:600;margin-bottom:8px;text-align:center;"></div>
+
+  <div style="width:100%;background:#eee;height:14px;border-radius:10px;overflow:hidden">
+    <div id="ovBar" style="width:0%;height:100%;background:#2563eb"></div>
+  </div>
+</div>
     </div>
   </div>
 
@@ -2914,7 +2921,7 @@ async function onSubmitNext(){
       resetAll();
     }
  }catch(err){
-  document.getElementById("progressBox").style.display = "none";
+  finishProgress("Error! Try again.");
   clearInterval(window.progressInterval);
   console.error(err);
 }finally{
@@ -2952,6 +2959,8 @@ window.PHOTO_CACHE = {};   // ✅ clear photo thumbs cache
 }
 
 function resetAll(){
+    window.MASTER_DATA = {};   // ✅ RAM wala old data clear
+  window.PHOTO_CACHE = {};   // ✅ thumbnail cache clear
   // clear draft
   localStorage.removeItem("draft");
   // keep submissionId? no; fresh submission
@@ -2988,49 +2997,55 @@ window.addEventListener("pageshow", (e) => {
   }
 });
 function startProgress(msg){
-  const box = document.getElementById("progressBox");
-  const bar = document.getElementById("progressBar");
-  const label = document.getElementById("msgLabel");
+  const ov = document.getElementById("overlay");
+  const wrap = document.getElementById("ovProgress");
+  const bar = document.getElementById("ovBar");
+  const m = document.getElementById("ovMsg");
 
-  box.style.display = "block";
+  // show overlay
+  setText("okTitle", msg);
+  setText("okSub", ""); // sub text blank
+  wrap.style.display = "block";
+  m.innerText = msg;
+
+  ov.classList.add("show");
+  ov.setAttribute("aria-hidden","false");
+
   bar.style.width = "0%";
-  label.innerText = msg;
-
   let p = 0;
+  clearInterval(window.progressInterval);
   window.progressInterval = setInterval(()=>{
-      if(p < 90){
-        p += 5;
-        bar.style.width = p + "%";
-      }
+    if(p < 90){
+      p += 5;
+      bar.style.width = p + "%";
+    }
   },200);
 }
 
 function finishProgress(msg){
-  const bar = document.getElementById("progressBar");
-  const label = document.getElementById("msgLabel");
+  const ov = document.getElementById("overlay");
+  const wrap = document.getElementById("ovProgress");
+  const bar = document.getElementById("ovBar");
+  const m = document.getElementById("ovMsg");
 
   clearInterval(window.progressInterval);
 
   bar.style.width = "100%";
-  label.innerText = msg;
+  m.innerText = msg;
+  setText("okTitle", msg);
+  setText("okSub", "");
 
   setTimeout(()=>{
-      document.getElementById("progressBox").style.display="none";
-  },3000);
+    wrap.style.display = "none";
+    ov.classList.remove("show");
+    ov.setAttribute("aria-hidden","true");
+  }, 900);
 }
 </script>
-<div id="progressBox" style="display:none;position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #ddd;padding:10px;z-index:9999">
-  
-  <div id="msgLabel" style="font-weight:600;margin-bottom:6px;text-align:center"></div>
-  
-  <div style="width:100%;background:#eee;height:10px;border-radius:6px;overflow:hidden">
-      <div id="progressBar" style="width:0%;height:100%;background:#2563eb"></div>
-  </div>
-
-</div>
   
 </body>
 </html>
+
 
 
 
