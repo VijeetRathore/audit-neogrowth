@@ -2892,13 +2892,14 @@ async function onSubmitNext(){
   setStore(store);
 
   try{
+    startProgress(L("wait") || "Please wait...");
     const payload = buildPayload(currentPage);
     const res = await fetch(APPS_SCRIPT_URL, {
   method: "POST",
   body: JSON.stringify(payload), // text/plain by default => no preflight
 });
     const data = await res.json().catch(()=> ({}));
-
+ finishProgress(L("success") || "Success"); 
     if(data && data.submissionId){
       submissionId = String(data.submissionId);
       localStorage.setItem("submissionId", submissionId);
@@ -2912,14 +2913,14 @@ async function onSubmitNext(){
       showSuccess();
       resetAll();
     }
-  }catch(err){
-    // if you have msgLabels error key, use it; else keep old label
-    btn.textContent = L("wait") || old;
-    console.error(err);
-  }finally{
-    btn.disabled = false;
-    btn.textContent = (currentPage===6 ? (L("submit") || L("next")) : L("next")) || old;
-  }
+ }catch(err){
+  document.getElementById("progressBox").style.display = "none";
+  clearInterval(window.progressInterval);
+  console.error(err);
+}finally{
+  btn.disabled = false;
+  btn.textContent = (currentPage===6 ? (L("submit") || L("next")) : (L("next"))) || old;
+}
 }
 
 function showSuccess(){
@@ -2986,10 +2987,51 @@ window.addEventListener("pageshow", (e) => {
     showPage(1);
   }
 });
-</script>
+function startProgress(msg){
+  const box = document.getElementById("progressBox");
+  const bar = document.getElementById("progressBar");
+  const label = document.getElementById("msgLabel");
 
+  box.style.display = "block";
+  bar.style.width = "0%";
+  label.innerText = msg;
+
+  let p = 0;
+  window.progressInterval = setInterval(()=>{
+      if(p < 90){
+        p += 5;
+        bar.style.width = p + "%";
+      }
+  },200);
+}
+
+function finishProgress(msg){
+  const bar = document.getElementById("progressBar");
+  const label = document.getElementById("msgLabel");
+
+  clearInterval(window.progressInterval);
+
+  bar.style.width = "100%";
+  label.innerText = msg;
+
+  setTimeout(()=>{
+      document.getElementById("progressBox").style.display="none";
+  },3000);
+}
+</script>
+<div id="progressBox" style="display:none;position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #ddd;padding:10px;z-index:9999">
+  
+  <div id="msgLabel" style="font-weight:600;margin-bottom:6px;text-align:center"></div>
+  
+  <div style="width:100%;background:#eee;height:10px;border-radius:6px;overflow:hidden">
+      <div id="progressBar" style="width:0%;height:100%;background:#2563eb"></div>
+  </div>
+
+</div>
+  
 </body>
 </html>
+
 
 
 
