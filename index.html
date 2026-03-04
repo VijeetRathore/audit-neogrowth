@@ -3003,10 +3003,10 @@ function startProgress(msg){
   const m = document.getElementById("ovMsg");
 
   // show overlay
-  setText("okTitle", msg);
-  setText("okSub", ""); // sub text blank
-  wrap.style.display = "block";
-  m.innerText = msg;
+ setText("okTitle", "");
+setText("okSub", "");
+wrap.style.display = "block";
+m.innerText = msg;
 
   ov.classList.add("show");
   ov.setAttribute("aria-hidden","false");
@@ -3031,7 +3031,6 @@ function finishProgress(msg){
   clearInterval(window.progressInterval);
 
   bar.style.width = "100%";
-  m.innerText = msg;
   setText("okTitle", msg);
   setText("okSub", "");
 
@@ -3045,6 +3044,7 @@ function finishProgress(msg){
   
 </body>
 </html>
+
 
 
 
