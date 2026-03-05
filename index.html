@@ -1763,8 +1763,9 @@ async function fileToCompressedDataUrl(file, opts = {}) {
         const canvas = document.createElement("canvas");
         canvas.width = width;
         canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0, width, height);
+ const ctx = canvas.getContext("2d");
+if (!ctx) return reject(new Error("Canvas context not available"));
+ctx.drawImage(img, 0, 0, width, height);
         
         const compressedData = canvas.toDataURL(mime, quality);
         resolve(compressedData);
@@ -1781,22 +1782,40 @@ async function filesToDataUrls(files) {
   const arr = Array.from(files || []);
   const out = [];
 
-  // Mobile RAM bachane ke liye ek-ek karke process karega (No Concurrency)
+  // fallback reader (no canvas)
+  const readAsDataUrl = (f) => new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = () => reject(new Error("File Read Error"));
+    r.readAsDataURL(f);
+  });
+
   for (const f of arr) {
     try {
-      const result = await fileToCompressedDataUrl(f, { 
-        maxW: 1024, 
-        maxH: 1024, 
-        quality: 0.5 
+      // 1) try compression
+      const result = await fileToCompressedDataUrl(f, {
+        maxW: 1024,
+        maxH: 1024,
+        quality: 0.5
       });
-      out.push(result);
+      if (result && typeof result === "string" && result.startsWith("data:")) {
+        out.push(result);
+      } else {
+        // 2) fallback
+        out.push(await readAsDataUrl(f));
+      }
     } catch (err) {
-      console.error("Compression error:", err);
+      console.warn("Compression failed, using original:", err);
+      try {
+        out.push(await readAsDataUrl(f));
+      } catch (e2) {
+        console.error("Both compression + fallback failed:", e2);
+      }
     }
   }
+
   return out;
-}
-  
+}  
 function renderThumbs(qid, key, dataUrls) {
   const t = document.getElementById(`${qid}_${key}_thumbs`);
   if (!t) return;
@@ -3107,6 +3126,7 @@ function finishProgress(msg){
   
 </body>
 </html>
+
 
 
 
