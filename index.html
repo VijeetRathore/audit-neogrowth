@@ -1797,12 +1797,18 @@ async function filesToDataUrls(files) {
   return out;
 }
   
-function renderThumbs(qid, key, dataUrls){
+function renderThumbs(qid, key, dataUrls) {
   const t = document.getElementById(`${qid}_${key}_thumbs`);
-  if(!t) return;
+  if (!t) return;
   t.innerHTML = "";
-  dataUrls.forEach((url, idx)=>{
-  if(url === "HAS_PHOTO") return;   // ← ADD THIS LINE
+
+  // ✅ Array check taaki code crash na ho
+  const list = Array.isArray(dataUrls) ? dataUrls : [];
+
+  list.forEach((url, idx) => {
+    // ✅ "HAS_PHOTO" marker ko skip karein taaki blank thumbnails na dikhen
+    if (url === "HAS_PHOTO" || !url) return;
+
     const d = document.createElement("div");
     d.className = "thumb";
     d.style.backgroundImage = `url('${url}')`;
@@ -1811,14 +1817,18 @@ function renderThumbs(qid, key, dataUrls){
     x.type = "button";
     x.className = "x";
     x.textContent = "×";
-    x.onclick = ()=>{
-      // remove this index
+    
+    // ✅ Delete action ko aur behtar banaya
+    x.onclick = (e) => {
+      e.stopPropagation(); // Parent click ko rokne ke liye
       const store = getStore();
-      const list = (store?.responses?.[qid]?.[key] || []);
-      list.splice(idx,1);
-      setStore(store);
-      renderThumbs(qid,key,list);
+      if (store.responses[qid] && store.responses[qid][key]) {
+        store.responses[qid][key].splice(idx, 1);
+        setStore(store);
+        renderThumbs(qid, key, store.responses[qid][key]);
+      }
     };
+    
     d.appendChild(x);
     t.appendChild(d);
   });
@@ -3097,6 +3107,7 @@ function finishProgress(msg){
   
 </body>
 </html>
+
 
 
 
