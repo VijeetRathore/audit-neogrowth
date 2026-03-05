@@ -1839,6 +1839,7 @@ function renderThumbs(qid, key, dataUrls){
   if(!t) return;
   t.innerHTML = "";
   dataUrls.forEach((url, idx)=>{
+  if(url === "HAS_PHOTO") return;   // ← ADD THIS LINE
     const d = document.createElement("div");
     d.className = "thumb";
     d.style.backgroundImage = `url('${url}')`;
@@ -3133,6 +3134,7 @@ function finishProgress(msg){
   
 </body>
 </html>
+
 
 
 
