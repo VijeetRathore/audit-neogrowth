@@ -1731,140 +1731,72 @@ function clearThumbs(qid, key){
   const t = document.getElementById(`${qid}_${key}_thumbs`);
   if(t) t.innerHTML="";
 }
-// ✅ Compress + resize before converting to dataURL
+// ✅ Mobile-Optimized Compression & Processing
 async function fileToCompressedDataUrl(file, opts = {}) {
-  const { maxW=1280, maxH=1280, quality=0.75, mime="image/jpeg", maxKB=500 } = opts;
+  const { 
+    maxW = 1024, 
+    maxH = 1024, 
+    quality = 0.5, 
+    mime = "image/jpeg" 
+  } = opts;
 
-  // If not an image, fallback
-  if (!file || !file.type || !file.type.startsWith("image/")) {
-    return await new Promise((res, rej) => {
-      const fr = new FileReader();
-      fr.onload = () => res(String(fr.result || ""));
-      fr.onerror = () => rej(fr.error);
-      fr.readAsDataURL(file);
-    });
-  }
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
 
-  // Read as dataURL first
-// Read as dataURL first (fallback ke liye)
-const originalDataUrl = await new Promise((res, rej) => {
-  const fr = new FileReader();
-  fr.onload = () => res(String(fr.result || ""));
-  fr.onerror = () => rej(fr.error);
-  fr.readAsDataURL(file);
-});
+        if (width > height) {
+          if (width > maxW) {
+            height *= maxW / width;
+            width = maxW;
+          }
+        } else {
+          if (height > maxH) {
+            width *= maxH / height;
+            height = maxH;
+          }
+        }
 
-// ✅ Mobile-safe decode: createImageBitmap (less crash / more compatible)
-let srcW, srcH;
-let drawSource = null; // ImageBitmap OR HTMLImageElement
-
-try {
-  if ("createImageBitmap" in window) {
-    const bmp = await createImageBitmap(file);
-    drawSource = bmp;
-    srcW = bmp.width;
-    srcH = bmp.height;
-  } else {
-    throw new Error("createImageBitmap not available");
-  }
-} catch (e) {
-  // fallback old way
-  const img = await new Promise((res, rej) => {
-    const im = new Image();
-    im.onload = () => res(im);
-    im.onerror = () => rej(new Error("Image decode failed"));
-    im.src = originalDataUrl;
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        const compressedData = canvas.toDataURL(mime, quality);
+        resolve(compressedData);
+      };
+      img.onerror = () => reject(new Error("Image Load Error"));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error("File Read Error"));
+    reader.readAsDataURL(file);
   });
-  drawSource = img;
-  srcW = img.width;
-  srcH = img.height;
-}
-
-  // Draw to canvas (resize)
-  const img = await new Promise((res, rej) => {
-    const im = new Image();
-    im.onload = () => res(im);
-    im.onerror = rej;
-    im.src = originalDataUrl;
-  });
-
-  let width = srcW, height = srcH;
-  const ratio = Math.min(maxW / width, maxH / height, 1); // never upscale
-  const newW = Math.round(width * ratio);
-  const newH = Math.round(height * ratio);
-
-  const canvas = document.createElement("canvas");
-  canvas.width = newW;
-  canvas.height = newH;
-
-  const ctx = canvas.getContext("2d");
- ctx.drawImage(drawSource, 0, 0, newW, newH);
-
-// ✅ release bitmap memory on mobile
-if (drawSource && typeof drawSource.close === "function") {
-  try { drawSource.close(); } catch(e) {}
-}
-  // Export compressed// Export compressed (try to keep <= ~500KB)
-let q = quality;
-let compressed = canvas.toDataURL(mime, q);
-
-// 500KB limit (base64 has overhead, so use a safe length cap)
-// base64 dataURL overhead hota hai, so bytes->length safe conversion
-const MAX_DATAURL_LEN = Math.floor((maxKB * 1024) * 1.37);
-  
-let tries = 0;
-while (compressed.length > MAX_DATAURL_LEN && tries < 6) {
-  q = Math.max(0.35, q - 0.08);   // reduce quality step-by-step
-  compressed = canvas.toDataURL(mime, q);
-  tries++;
-}
-
-return compressed;
 }
 
 async function filesToDataUrls(files) {
   const arr = Array.from(files || []);
-  const out = new Array(arr.length);
+  const out = [];
 
-  const mem = navigator.deviceMemory || 4;   // many phones return 2/4
-const CONCURRENCY = (mem <= 2 || arr.length > 12) ? 1 : 2;
-  let idx = 0;
-
-  async function worker() {
-    while (idx < arr.length) {
-      const my = idx++;
-      const f = arr[my];
-
- const count = arr.length;
-
-// ✅ adaptive settings (no user dependency)
-let maxW = 1280, maxH = 1280, quality = 0.75;
-
-if (count > 10) {          // 11–20 photos
-  maxW = 1024; maxH = 1024;
-  quality = 0.55;
-} else if (count > 5) {    // 6–10 photos
-  quality = 0.65;
-}
-let maxKB = 500;
-if (count > 10) maxKB = 350;   // 11–20 photos -> tighter
-else if (count > 5) maxKB = 450;
-      
-out[my] = await fileToCompressedDataUrl(f, {
-  maxW, maxH, quality, maxKB,
-  mime: "image/jpeg"
-});
+  // Mobile RAM bachane ke liye ek-ek karke process karega (No Concurrency)
+  for (const f of arr) {
+    try {
+      const result = await fileToCompressedDataUrl(f, { 
+        maxW: 1024, 
+        maxH: 1024, 
+        quality: 0.5 
+      });
+      out.push(result);
+    } catch (err) {
+      console.error("Compression error:", err);
     }
   }
-
-  const workers = [];
-  for (let i = 0; i < Math.min(CONCURRENCY, arr.length); i++) {
-    workers.push(worker());
-  }
-  await Promise.all(workers);
-
   return out;
 }
+  
 function renderThumbs(qid, key, dataUrls){
   const t = document.getElementById(`${qid}_${key}_thumbs`);
   if(!t) return;
@@ -3165,6 +3097,7 @@ function finishProgress(msg){
   
 </body>
 </html>
+
 
 
 
