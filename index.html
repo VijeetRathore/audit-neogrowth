@@ -1746,12 +1746,39 @@ async function fileToCompressedDataUrl(file, opts = {}) {
   }
 
   // Read as dataURL first
-  const originalDataUrl = await new Promise((res, rej) => {
-    const fr = new FileReader();
-    fr.onload = () => res(String(fr.result || ""));
-    fr.onerror = () => rej(fr.error);
-    fr.readAsDataURL(file);
+// Read as dataURL first (fallback ke liye)
+const originalDataUrl = await new Promise((res, rej) => {
+  const fr = new FileReader();
+  fr.onload = () => res(String(fr.result || ""));
+  fr.onerror = () => rej(fr.error);
+  fr.readAsDataURL(file);
+});
+
+// ✅ Mobile-safe decode: createImageBitmap (less crash / more compatible)
+let srcW, srcH;
+let drawSource = null; // ImageBitmap OR HTMLImageElement
+
+try {
+  if ("createImageBitmap" in window) {
+    const bmp = await createImageBitmap(file);
+    drawSource = bmp;
+    srcW = bmp.width;
+    srcH = bmp.height;
+  } else {
+    throw new Error("createImageBitmap not available");
+  }
+} catch (e) {
+  // fallback old way
+  const img = await new Promise((res, rej) => {
+    const im = new Image();
+    im.onload = () => res(im);
+    im.onerror = () => rej(new Error("Image decode failed"));
+    im.src = originalDataUrl;
   });
+  drawSource = img;
+  srcW = img.width;
+  srcH = img.height;
+}
 
   // Draw to canvas (resize)
   const img = await new Promise((res, rej) => {
@@ -1761,7 +1788,7 @@ async function fileToCompressedDataUrl(file, opts = {}) {
     im.src = originalDataUrl;
   });
 
-  let { width, height } = img;
+  let width = srcW, height = srcH;
   const ratio = Math.min(maxW / width, maxH / height, 1); // never upscale
   const newW = Math.round(width * ratio);
   const newH = Math.round(height * ratio);
@@ -1771,8 +1798,12 @@ async function fileToCompressedDataUrl(file, opts = {}) {
   canvas.height = newH;
 
   const ctx = canvas.getContext("2d");
-  ctx.drawImage(img, 0, 0, newW, newH);
+ ctx.drawImage(drawSource, 0, 0, newW, newH);
 
+// ✅ release bitmap memory on mobile
+if (drawSource && typeof drawSource.close === "function") {
+  try { drawSource.close(); } catch(e) {}
+}
   // Export compressed// Export compressed (try to keep <= ~500KB)
 let q = quality;
 let compressed = canvas.toDataURL(mime, q);
@@ -3134,6 +3165,7 @@ function finishProgress(msg){
   
 </body>
 </html>
+
 
 
 
