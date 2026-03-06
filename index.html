@@ -1934,8 +1934,8 @@ function renderYnPhoto(qid, minPhotos, maxPhotos){
     store.responses = store.responses || {};
     store.responses[qid] = store.responses[qid] || {};
     store.responses[qid].photos = Array.isArray(store.responses[qid].photos)
-      ? store.responses[qid].photos.filter(Boolean)
-      : [];
+  ? store.responses[qid].photos.filter(v => v && v !== "HAS_PHOTO")
+  : [];
     return store;
   }
 
@@ -1960,17 +1960,20 @@ function renderYnPhoto(qid, minPhotos, maxPhotos){
   inp.addEventListener("change", async ()=>{
     const store = ensureStoreShape();
     const prev = Array.isArray(store.responses[qid].photos)
-      ? store.responses[qid].photos.filter(Boolean)
-      : [];
+  ? store.responses[qid].photos.filter(v => v && v !== "HAS_PHOTO")
+  : [];
 
     const added = await filesToDataUrls(inp.files);
-    if (added.length) {
-      const merged = prev.concat(added).slice(0, maxPhotos);
-      store.responses[qid].photos = merged;
-      setStore(store);
-      renderThumbs(qid, "photos", merged);
-      setErr(qid, "");
-    }
+if (added.length) {
+  const merged = (maxPhotos === 1)
+    ? [added[0]]
+    : prev.concat(added).slice(0, maxPhotos);
+
+  store.responses[qid].photos = merged;
+  setStore(store);
+  renderThumbs(qid, "photos", merged);
+  setErr(qid, "");
+}
     inp.value = "";
   });
 
@@ -3126,6 +3129,7 @@ function finishProgress(msg){
   
 </body>
 </html>
+
 
 
 
