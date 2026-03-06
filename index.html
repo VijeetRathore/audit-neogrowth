@@ -1923,42 +1923,54 @@ function renderYnPhoto(qid, minPhotos, maxPhotos){
   lab.textContent = L("photo");
   photoWrap.appendChild(lab);
 
-  const inp = fileInput(qid, "photo", maxPhotos>1, true);
+  const inp = fileInput(qid, "photo", maxPhotos > 1, true);
   photoWrap.appendChild(inp);
 
   const thumbs = thumbsArea(qid, "photos");
   photoWrap.appendChild(thumbs);
 
-  box.appendChild(radiosYesNo(qid, (val)=>{
-    const show = (val==="Y");
-    photoWrap.style.display = show ? "block" : "none";
-
+  function ensureStoreShape(){
     const store = getStore();
     store.responses = store.responses || {};
     store.responses[qid] = store.responses[qid] || {};
+    store.responses[qid].photos = Array.isArray(store.responses[qid].photos)
+      ? store.responses[qid].photos.filter(Boolean)
+      : [];
+    return store;
+  }
+
+  box.appendChild(radiosYesNo(qid, (val)=>{
+    const show = (val === "Y");
+    photoWrap.style.display = show ? "block" : "none";
+
+    const store = ensureStoreShape();
     store.responses[qid].answer = val;
-    if(!show) store.responses[qid].photos = [];
+    if (!show) store.responses[qid].photos = [];
     setStore(store);
 
-    setErr(qid,"");
-    if(!show){ clearThumbs(qid,"photos"); }
-    else{
+    setErr(qid, "");
+    if (!show) {
+      clearThumbs(qid, "photos");
+    } else {
       const list = store.responses[qid].photos || [];
-      renderThumbs(qid,"photos",list);
+      renderThumbs(qid, "photos", list);
     }
   }));
 
   inp.addEventListener("change", async ()=>{
-    const store = getStore();
-    store.responses = store.responses || {};
-    store.responses[qid] = store.responses[qid] || {};
-    const prev = store.responses[qid].photos || [];
+    const store = ensureStoreShape();
+    const prev = Array.isArray(store.responses[qid].photos)
+      ? store.responses[qid].photos.filter(Boolean)
+      : [];
+
     const added = await filesToDataUrls(inp.files);
-    const merged = prev.concat(added).slice(0, maxPhotos);
-    store.responses[qid].photos = merged;
-    setStore(store);
-    renderThumbs(qid,"photos",merged);
-    setErr(qid,"");
+    if (added.length) {
+      const merged = prev.concat(added).slice(0, maxPhotos);
+      store.responses[qid].photos = merged;
+      setStore(store);
+      renderThumbs(qid, "photos", merged);
+      setErr(qid, "");
+    }
     inp.value = "";
   });
 
@@ -1967,10 +1979,11 @@ function renderYnPhoto(qid, minPhotos, maxPhotos){
   // restore
   restoreRadio(qid);
   const cur = getRadio(qid);
-  photoWrap.style.display = (cur==="Y") ? "block" : "none";
-  const store = getStore();
-  const list = store?.responses?.[qid]?.photos || [];
-  if(cur==="Y") renderThumbs(qid,"photos",list);
+  photoWrap.style.display = (cur === "Y") ? "block" : "none";
+
+  const store = ensureStoreShape();
+  const list = store.responses[qid].photos || [];
+  if (cur === "Y") renderThumbs(qid, "photos", list);
 
   return box;
 }
@@ -3113,6 +3126,7 @@ function finishProgress(msg){
   
 </body>
 </html>
+
 
 
 
