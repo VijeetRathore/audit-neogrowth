@@ -2362,10 +2362,6 @@ function renderHRQ38(){
   const wrap = document.createElement("div");
   wrap.style.display = "block";
 
-  // init cache
-  window.PHOTO_CACHE = window.PHOTO_CACHE || {};
-  window.PHOTO_CACHE[qid] = window.PHOTO_CACHE[qid] || [];
-
   // hidden input (camera open 1 photo at a time)
   const inp = fileInput(qid, "photos", false, true); // multiple=false, capture=true
   inp.style.display = "none";
@@ -2380,46 +2376,32 @@ function renderHRQ38(){
   // thumbs area
   wrap.appendChild(thumbsArea(qid, "photos"));
 
-  function syncDraftCount(){
+  function ensureStoreShape(){
     const store = getStore();
     store.responses = store.responses || {};
     store.responses[qid] = store.responses[qid] || {};
-    // placeholder array length for validation (min/max)
-    store.responses[qid].photos = Array(window.PHOTO_CACHE[qid].length).fill("HAS_PHOTO");
+    store.responses[qid].photos = Array.isArray(store.responses[qid].photos)
+      ? store.responses[qid].photos.filter(Boolean)
+      : [];
     setStore(store);
+    return store;
+  }
+
+  function getPhotos(){
+    const store = ensureStoreShape();
+    return store.responses[qid].photos || [];
   }
 
   function updateBtn(){
-    const n = window.PHOTO_CACHE[qid].length;
+    const n = getPhotos().length;
     btn.textContent = (n === 0) ? "Capture photo" : `Add more photo (${n}/10)`;
     btn.disabled = (n >= 10);
   }
 
-  function renderLocalThumbs(){
-    const t = document.getElementById(`${qid}_photos_thumbs`);
-    if(!t) return;
-    t.innerHTML = "";
-
-    window.PHOTO_CACHE[qid].forEach((url, idx) => {
-      const d = document.createElement("div");
-      d.className = "thumb";
-      d.style.backgroundImage = `url('${url}')`;
-
-      const x = document.createElement("button");
-      x.type = "button";
-      x.className = "x";
-      x.textContent = "×";
-      x.onclick = () => {
-        window.PHOTO_CACHE[qid].splice(idx, 1);
-        syncDraftCount();
-        renderLocalThumbs();
-        updateBtn();
-        setErr(qid, "");
-      };
-
-      d.appendChild(x);
-      t.appendChild(d);
-    });
+  function repaint(){
+    const list = getPhotos();
+    renderThumbs(qid, "photos", list);
+    updateBtn();
   }
 
   btn.onclick = () => inp.click();
@@ -2427,19 +2409,24 @@ function renderHRQ38(){
   inp.addEventListener("change", async () => {
     const added = await filesToDataUrls(inp.files);
     if (added.length) {
-      window.PHOTO_CACHE[qid] = window.PHOTO_CACHE[qid].concat([added[0]]).slice(0, 10);
-      syncDraftCount();
-      renderLocalThumbs();
-      updateBtn();
+      const store = ensureStoreShape();
+      const oldList = Array.isArray(store.responses[qid].photos)
+        ? store.responses[qid].photos.filter(Boolean)
+        : [];
+
+      // 1 photo at a time input, but keep total max 10
+      store.responses[qid].photos = oldList.concat([added[0]]).slice(0, 10);
+      setStore(store);
+
+      repaint();
       setErr(qid, "");
     }
     inp.value = "";
   });
 
   // initial paint
-  syncDraftCount();
-  renderLocalThumbs();
-  updateBtn();
+  ensureStoreShape();
+  repaint();
 
   box.appendChild(wrap);
   return box;
@@ -3126,6 +3113,7 @@ function finishProgress(msg){
   
 </body>
 </html>
+
 
 
 
