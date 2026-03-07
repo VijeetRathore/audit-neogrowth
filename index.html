@@ -1733,12 +1733,12 @@ function clearThumbs(qid, key){
 }
 // ✅ Mobile-Optimized Compression & Processing
 async function fileToCompressedDataUrl(file, opts = {}) {
-  const { 
-    maxW = 1024, 
-    maxH = 1024, 
-    quality = 0.5, 
-    mime = "image/jpeg" 
-  } = opts;
+  const {
+  maxW = 800,
+  maxH = 800,
+  quality = 0.45,
+  mime = "image/jpeg"
+} = opts;
 
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -2359,18 +2359,41 @@ function renderFireQ25(){
 function renderSingleThumb(thumbsId, url, onRemove){
   const t = document.getElementById(thumbsId);
   if(!t) return;
-  t.innerHTML="";
+  t.innerHTML = "";
   if(!url) return;
-  const d=document.createElement("div");
-  d.className="thumb";
+
+  const d = document.createElement("div");
+  d.className = "thumb";
+  d.style.width = "64px";
+  d.style.height = "64px";
+  d.style.minWidth = "64px";
   d.style.backgroundImage = `url('${url}')`;
-  const x=document.createElement("button");
-  x.type="button"; x.className="x"; x.textContent="×";
+  d.style.backgroundSize = "cover";
+  d.style.backgroundPosition = "center";
+  d.style.backgroundRepeat = "no-repeat";
+  d.style.borderRadius = "8px";
+  d.style.position = "relative";
+  d.style.display = "inline-block";
+  d.style.marginTop = "4px";
+
+  const x = document.createElement("button");
+  x.type = "button";
+  x.className = "x";
+  x.textContent = "×";
   x.onclick = onRemove;
+  x.style.position = "absolute";
+  x.style.top = "-6px";
+  x.style.right = "-6px";
+  x.style.width = "20px";
+  x.style.height = "20px";
+  x.style.lineHeight = "18px";
+  x.style.padding = "0";
+  x.style.borderRadius = "50%";
+  x.style.fontSize = "14px";
+
   d.appendChild(x);
   t.appendChild(d);
 }
-
 function renderHRQ38(){
   const qid = "q38";
   const box = qBoxBase(qid);
@@ -3104,7 +3127,7 @@ m.innerText = msg;
       p += 5;
       bar.style.width = p + "%";
     }
-  },850);
+  },1050);
 }
 
 function finishProgress(msg){
@@ -3129,6 +3152,7 @@ function finishProgress(msg){
   
 </body>
 </html>
+
 
 
 
