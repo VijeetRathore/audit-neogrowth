@@ -2700,7 +2700,8 @@ function renderAssetsQ42(){
         row.classList.remove("err");
 
         // restore thumb if needed
-        const url = store.responses.q42.assets[code].photos?.[0] || "";
+ const rawUrl = store.responses.q42.assets[code].photos?.[0] || "";
+const url = (rawUrl && rawUrl !== "HAS_PHOTO") ? rawUrl : "";
         renderSingleThumb(`q42_${code}_thumbs`, url, ()=>{
           const s=getStore();
           s.responses.q42.assets[code].photos=[];
@@ -2711,42 +2712,60 @@ function renderAssetsQ42(){
     });
 
     inp.addEventListener("change", async ()=>{
-      const added = await filesToDataUrls(inp.files);
-      const store=getStore();
-      store.responses = store.responses || {};
-      store.responses.q42 = store.responses.q42 || {};
-      store.responses.q42.assets = store.responses.q42.assets || {};
-      store.responses.q42.assets[code] = store.responses.q42.assets[code] || {};
-      store.responses.q42.assets[code].photos = (added[0] ? [added[0]] : []);
-      setStore(store);
+  const added = await filesToDataUrls(inp.files);
+  const store = getStore();
 
-      renderSingleThumb(`q42_${code}_thumbs`, store.responses.q42.assets[code].photos[0] || "", ()=>{
-        const s=getStore();
-        s.responses.q42.assets[code].photos=[];
-        setStore(s);
-        renderSingleThumb(`q42_${code}_thumbs`, "", ()=>{});
-      });
+  store.responses = store.responses || {};
+  store.responses.q42 = store.responses.q42 || {};
+  store.responses.q42.assets = store.responses.q42.assets || {};
+  store.responses.q42.assets[code] = store.responses.q42.assets[code] || {};
+  store.responses.q42.assets[code].photos = Array.isArray(store.responses.q42.assets[code].photos)
+    ? store.responses.q42.assets[code].photos
+    : [];
 
-      document.getElementById(`err_q42_${code}`).textContent="";
-      row.classList.remove("err");
-      inp.value="";
+  if (added.length) {
+    store.responses.q42.assets[code].photos = [added[0]];
+    setStore(store);
+
+    renderSingleThumb(`q42_${code}_thumbs`, store.responses.q42.assets[code].photos[0] || "", ()=>{
+      const s = getStore();
+      s.responses = s.responses || {};
+      s.responses.q42 = s.responses.q42 || {};
+      s.responses.q42.assets = s.responses.q42.assets || {};
+      s.responses.q42.assets[code] = s.responses.q42.assets[code] || {};
+      s.responses.q42.assets[code].photos = [];
+      setStore(s);
+      renderSingleThumb(`q42_${code}_thumbs`, "", ()=>{});
     });
 
-    // restore selection + thumb
-    const store2=getStore();
-    const saved = store2?.responses?.q42?.assets?.[code] || {};
-    if(saved.answer){
-      const rr = document.querySelector(`input[name="q42_${code}"][value="${saved.answer}"]`);
-      if(rr) rr.checked = true;
-      photoWrap.style.display = (saved.answer==="Y") ? "block" : "none";
-      renderSingleThumb(`q42_${code}_thumbs`, saved.photos?.[0] || "", ()=>{
-        const s=getStore();
-        s.responses.q42.assets[code].photos=[];
-        setStore(s);
-        renderSingleThumb(`q42_${code}_thumbs`, "", ()=>{});
-      });
-    }
+    document.getElementById(`err_q42_${code}`).textContent = "";
+    row.classList.remove("err");
+  }
 
+  inp.value = "";
+});
+    // restore selection + thumb
+    const store2 = getStore();
+const saved = store2?.responses?.q42?.assets?.[code] || {};
+if (saved.answer) {
+  const rr = document.querySelector(`input[name="q42_${code}"][value="${saved.answer}"]`);
+  if (rr) rr.checked = true;
+  photoWrap.style.display = (saved.answer === "Y") ? "block" : "none";
+
+  const rawUrl = saved.photos?.[0] || "";
+  const url = (rawUrl && rawUrl !== "HAS_PHOTO") ? rawUrl : "";
+
+  renderSingleThumb(`q42_${code}_thumbs`, url, ()=>{
+    const s = getStore();
+    s.responses = s.responses || {};
+    s.responses.q42 = s.responses.q42 || {};
+    s.responses.q42.assets = s.responses.q42.assets || {};
+    s.responses.q42.assets[code] = s.responses.q42.assets[code] || {};
+    s.responses.q42.assets[code].photos = [];
+    setStore(s);
+    renderSingleThumb(`q42_${code}_thumbs`, "", ()=>{});
+  });
+}
     area.appendChild(row);
   });
 
@@ -3165,6 +3184,7 @@ function finishProgress(msg){
   
 </body>
 </html>
+
 
 
 
