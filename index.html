@@ -2539,27 +2539,43 @@ function renderACQ39(){
       item.appendChild(t);
 
       inp.addEventListener("change", async ()=>{
-        const store=getStore();
-        const added=await filesToDataUrls(inp.files);
-        store.responses = store.responses || {};
-        store.responses.q39 = store.responses.q39 || {};
-        store.responses.q39.photos = store.responses.q39.photos || [];
-        store.responses.q39.photos[i-1] = added[0] || "";
-        setStore(store);
-        renderSingleThumb(`q39_photo_${i}_thumbs`, store.responses.q39.photos[i-1], ()=>{
-          const s=getStore();
-          s.responses.q39.photos[i-1] = "";
-          setStore(s);
-          renderSingleThumb(`q39_photo_${i}_thumbs`, "", ()=>{});
-        });
-        err.textContent=""; item.classList.remove("err");
-        inp.value="";
-      });
+  const store = getStore();
+  const added = await filesToDataUrls(inp.files);
+
+  store.responses = store.responses || {};
+  store.responses.q39 = store.responses.q39 || {};
+  store.responses.q39.photos = Array.isArray(store.responses.q39.photos)
+    ? store.responses.q39.photos
+    : [];
+
+  if (added.length) {
+    store.responses.q39.photos[i-1] = added[0];
+    setStore(store);
+
+    renderSingleThumb(`q39_photo_${i}_thumbs`, store.responses.q39.photos[i-1], ()=>{
+      const s = getStore();
+      s.responses = s.responses || {};
+      s.responses.q39 = s.responses.q39 || {};
+      s.responses.q39.photos = Array.isArray(s.responses.q39.photos)
+        ? s.responses.q39.photos
+        : [];
+      s.responses.q39.photos[i-1] = "";
+      setStore(s);
+      renderSingleThumb(`q39_photo_${i}_thumbs`, "", ()=>{});
+    });
+
+    err.textContent = "";
+    item.classList.remove("err");
+  }
+
+  inp.value = "";
+});
 
       // restore
-      const store=getStore();
-      const url = store?.responses?.q39?.photos?.[i-1] || "";
-      renderSingleThumb(`q39_photo_${i}_thumbs`, url, ()=>{
+ const store = getStore();
+const rawUrl = store?.responses?.q39?.photos?.[i-1] || "";
+const url = (rawUrl && rawUrl !== "HAS_PHOTO") ? rawUrl : "";
+renderSingleThumb(`q39_photo_${i}_thumbs`, url, ()=>{
         const s=getStore();
         s.responses.q39.photos[i-1] = "";
         setStore(s);
@@ -3149,6 +3165,7 @@ function finishProgress(msg){
   
 </body>
 </html>
+
 
 
 
