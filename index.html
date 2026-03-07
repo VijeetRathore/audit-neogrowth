@@ -1863,26 +1863,32 @@ function setStore(store){
   // 1) RAM me poora store (photos ke saath)
   window.MASTER_DATA = store || {};
 
-  // 2) localStorage ke liye clone
+  // 2) localStorage ke liye deep clone
   const draftForDisk = JSON.parse(JSON.stringify(store || {}));
 
   const stripPhotos = (obj) => {
-    if (obj == null) return; // ✅ null / undefined safe
+    if (obj == null) return;
 
     if (Array.isArray(obj)) {
       for (let i = 0; i < obj.length; i++) {
         const v = obj[i];
-        if (typeof v === "string" && v.startsWith("data:")) obj[i] = "HAS_PHOTO";
-        else if (v && typeof v === "object") stripPhotos(v); // ✅ null safe
+        if (typeof v === "string" && v.startsWith("data:")) {
+          obj[i] = "HAS_PHOTO";
+        } else if (v && typeof v === "object") {
+          stripPhotos(v);
+        }
       }
       return;
     }
 
     if (typeof obj === "object") {
-      Object.keys(obj).forEach(k => {
+      Object.keys(obj).forEach((k) => {
         const v = obj[k];
-        if (typeof v === "string" && v.startsWith("data:")) obj[k] = "HAS_PHOTO";
-        else if (v && typeof v === "object") stripPhotos(v); // ✅ null safe
+        if (typeof v === "string" && v.startsWith("data:")) {
+          obj[k] = "HAS_PHOTO";
+        } else if (v && typeof v === "object") {
+          stripPhotos(v);
+        }
       });
     }
   };
@@ -1891,8 +1897,15 @@ function setStore(store){
 
   try {
     localStorage.setItem("draft", JSON.stringify(draftForDisk));
-  } catch(e) {
+  } catch (e) {
     console.warn("localStorage limit reached, but RAM is holding your photos.");
+    try {
+      localStorage.removeItem("draft");
+      localStorage.setItem("draft_meta", JSON.stringify({
+        savedAt: Date.now(),
+        hasPhotos: true
+      }));
+    } catch (_) {}
   }
 }
   
@@ -2096,106 +2109,88 @@ function renderMultiPhoto(qid, min, max){
   wrap.style.display = "none";
   wrap.id = `wrap_${qid}_multi`;
 
-const lab = document.createElement("div");
-lab.className="label";
-lab.textContent = (qid === "q21")
+  const lab = document.createElement("div");
+  lab.className = "label";
+  lab.textContent = (qid === "q21")
     ? L("firstAidTip")
     : L("photo");
-wrap.appendChild(lab);
+  wrap.appendChild(lab);
 
-  // ✅ in-memory list for this qid
-  window.PHOTO_CACHE = window.PHOTO_CACHE || {};
-  if(!window.PHOTO_CACHE[qid]) window.PHOTO_CACHE[qid] = [];
-
-  // ✅ hidden input: camera open (1 photo at a time)
+  // hidden input: camera open (1 photo at a time)
   const inp = fileInput(qid, "multi", false, true); // multiple=false, capture=true
   inp.style.display = "none";
   wrap.appendChild(inp);
 
-  // ✅ button shown to user
+  // button shown to user
   const btn = document.createElement("button");
   btn.type = "button";
   btn.style.marginTop = "8px";
   wrap.appendChild(btn);
 
   // thumbs area
-  wrap.appendChild(thumbsArea(qid,"photos"));
+  wrap.appendChild(thumbsArea(qid, "photos"));
 
-  function syncStoreCount(){
+  function ensureStoreShape(){
     const store = getStore();
     store.responses = store.responses || {};
     store.responses[qid] = store.responses[qid] || {};
-    store.responses[qid].photos = window.PHOTO_CACHE[qid];
-    setStore(store);
+    store.responses[qid].photos = Array.isArray(store.responses[qid].photos)
+      ? store.responses[qid].photos.filter(v => v && v !== "HAS_PHOTO")
+      : [];
+    return store;
+  }
+
+  function getPhotos(){
+    const store = ensureStoreShape();
+    return store.responses[qid].photos || [];
   }
 
   function updateBtn(){
-    const n = window.PHOTO_CACHE[qid].length;
+    const n = getPhotos().length;
     btn.textContent = (n === 0) ? "Capture photo" : `Add more photo (${n}/${max})`;
     btn.disabled = (n >= max);
   }
 
-  function renderLocalThumbs(){
-    const t = document.getElementById(`${qid}_photos_thumbs`);
-    if(!t) return;
-    t.innerHTML = "";
-
-    window.PHOTO_CACHE[qid].forEach((url, idx)=>{
-      const d = document.createElement("div");
-      d.className = "thumb";
-      d.style.backgroundImage = `url('${url}')`;
-
-      const x = document.createElement("button");
-      x.type = "button";
-      x.className = "x";
-      x.textContent = "×";
-      x.onclick = ()=>{
-        window.PHOTO_CACHE[qid].splice(idx, 1);
-        syncStoreCount();
-        renderLocalThumbs();
-        updateBtn();
-      };
-
-      d.appendChild(x);
-      t.appendChild(d);
-    });
+  function repaint(){
+    const list = getPhotos();
+    renderThumbs(qid, "photos", list);
+    updateBtn();
   }
 
-  btn.onclick = ()=> inp.click();
+  btn.onclick = () => inp.click();
 
   box.appendChild(radiosYesNo(qid, (val)=>{
-    const show = (val==="Y");
+    const show = (val === "Y");
     wrap.style.display = show ? "block" : "none";
 
-    const store = getStore();
-    store.responses = store.responses || {};
-    store.responses[qid] = store.responses[qid] || {};
+    const store = ensureStoreShape();
     store.responses[qid].answer = val;
 
-    if(!show){
-      window.PHOTO_CACHE[qid] = [];
+    if (!show) {
       store.responses[qid].photos = [];
-      clearThumbs(qid,"photos");
+      clearThumbs(qid, "photos");
     }
-    setStore(store);
 
-    setErr(qid,"");
-    if(show){
-      renderLocalThumbs();
-      updateBtn();
-    }
+    setStore(store);
+    setErr(qid, "");
+
+    if (show) repaint();
   }));
 
   inp.addEventListener("change", async ()=>{
+    const store = ensureStoreShape();
+    const prev = Array.isArray(store.responses[qid].photos)
+      ? store.responses[qid].photos.filter(v => v && v !== "HAS_PHOTO")
+      : [];
+
     const added = await filesToDataUrls(inp.files);
-    if(added.length){
-      window.PHOTO_CACHE[qid] = window.PHOTO_CACHE[qid].concat([added[0]]).slice(0, max);
-      syncStoreCount();
-      renderLocalThumbs();
-      updateBtn();
-      setErr(qid,"");
+    if (added.length) {
+      store.responses[qid].photos = prev.concat([added[0]]).slice(0, max);
+      setStore(store);
+      repaint();
+      setErr(qid, "");
     }
-    inp.value="";
+    inp.value = "";
   });
 
   box.appendChild(wrap);
@@ -2203,15 +2198,17 @@ wrap.appendChild(lab);
   // restore
   restoreRadio(qid);
   const cur = getRadio(qid);
-  wrap.style.display = (cur==="Y") ? "block" : "none";
-  if(cur==="Y"){
-    renderLocalThumbs();
+  wrap.style.display = (cur === "Y") ? "block" : "none";
+
+  const store = ensureStoreShape();
+  const list = store.responses[qid].photos || [];
+  if (cur === "Y") {
+    renderThumbs(qid, "photos", list);
     updateBtn();
   }
 
   return box;
 }
-
 function renderFireQ25(){
   const qid = "q25";
   const box = qBoxBase(qid);
@@ -3152,6 +3149,7 @@ function finishProgress(msg){
   
 </body>
 </html>
+
 
 
 
