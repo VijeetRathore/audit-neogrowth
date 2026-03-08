@@ -2620,10 +2620,25 @@ function renderAssetsQ42(){
 
   // store structure: responses.q42.assets = { CODE: {answer:"Y/N", photos:[...] } }
   const store=getStore();
-  store.responses = store.responses || {};
-  store.responses.q42 = store.responses.q42 || {};
-  store.responses.q42.assets = store.responses.q42.assets || {};
-  setStore(store);
+store.responses = store.responses || {};
+store.responses.q42 = store.responses.q42 || {};
+store.responses.q42.assets = store.responses.q42.assets || {};
+
+const validCodes = assets.map((assetObj, idx) =>
+  (typeof assetObj === "string")
+    ? assetObj
+    : (assetObj.code || assetObj.asset || assetObj.id || String(idx + 1))
+);
+
+const cleanedAssets = {};
+validCodes.forEach(code => {
+  if (store.responses.q42.assets[code]) {
+    cleanedAssets[code] = store.responses.q42.assets[code];
+  }
+});
+
+store.responses.q42.assets = cleanedAssets;
+setStore(store);
 
   assets.forEach((assetObj, idx)=>{
     // support both string list OR object list
@@ -3191,6 +3206,7 @@ function finishProgress(msg){
   
 </body>
 </html>
+
 
 
 
